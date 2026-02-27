@@ -15,7 +15,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/restaurant/demo-bistro/menu" replace />} />
+          <Route path="/" element={<Navigate to="/owner/login" replace />} />
           <Route path="/restaurant/:slug/menu" element={<MenuPage />} />
           <Route path="/kitchen/:restaurantId" element={<KitchenDashboardPage />} />
           {/* Legacy direct admin route by restaurantId (for debugging) */}
