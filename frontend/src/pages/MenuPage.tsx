@@ -273,7 +273,6 @@ function MenuPageInner() {
           open={billOpen}
           onClose={() => setBillOpen(false)}
           tableNumber={tableFromUrl}
-          tableKey={tableKey}
           currencySymbol={currencySymbol}
         />
       )}
@@ -286,7 +285,6 @@ function MenuPageInner() {
             // Status will be updated via sockets / fetch; no extra flag needed here
           }}
           initialTable={tableFromUrl}
-          tableKey={tableKey}
           currencySymbol={currencySymbol}
         />
       )}
