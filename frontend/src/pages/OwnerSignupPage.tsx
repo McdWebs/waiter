@@ -44,7 +44,8 @@ export default function OwnerSignupPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+          <p className="text-sm font-semibold uppercase tracking-wider text-slate-500">Servo</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
             Create your restaurant
           </h1>
           <p className="mt-2 text-sm text-slate-600">

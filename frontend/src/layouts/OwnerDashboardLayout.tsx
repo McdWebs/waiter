@@ -28,6 +28,8 @@ export default function OwnerDashboardLayout() {
         <header className="border-b border-slate-200/80 bg-white shadow-sm shadow-slate-200/50">
           <div className="mx-auto flex max-w-5xl flex-nowrap items-center gap-2 overflow-x-auto px-2 py-1.5 sm:gap-3 sm:overflow-visible sm:px-4 sm:py-2">
             <h1 className="min-w-0 flex-shrink truncate text-sm font-bold tracking-tight text-slate-900 sm:min-w-[8rem] sm:text-base">
+              <span className="text-slate-500 font-semibold">Servo</span>
+              <span className="mx-1.5 text-slate-300">·</span>
               {restaurant?.name ?? 'Your restaurant'}
             </h1>
             <div className="flex flex-shrink-0 flex-nowrap items-center gap-1 sm:gap-2">

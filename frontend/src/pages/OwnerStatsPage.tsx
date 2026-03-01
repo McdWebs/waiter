@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../components/AuthContext'
 import { apiFetch } from '../lib/api'
+import { BarChartCard, StatCard } from '../components/stats'
 
 interface OwnerStats {
   ordersToday: number
@@ -20,9 +21,6 @@ interface OwnerStats {
   currency: string
 }
 
-const CARD_CLASS =
-  'rounded-xl border border-slate-200 bg-white p-4 shadow-sm'
-
 function formatCurrency(value: number, currency: string) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -37,10 +35,12 @@ export default function OwnerStatsPage() {
   const [stats, setStats] = useState<OwnerStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (showRefreshing = false) => {
     if (!token) return
-    setLoading(true)
+    if (showRefreshing) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     try {
       const data = await apiFetch<OwnerStats>('/api/owner/stats', { token })
@@ -50,6 +50,7 @@ export default function OwnerStatsPage() {
       setStats(null)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [token])
 
@@ -57,10 +58,15 @@ export default function OwnerStatsPage() {
     fetchStats()
   }, [fetchStats])
 
+  const handleRefresh = () => fetchStats(true)
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <p className="text-sm text-slate-500">Loading stats…</p>
+      <div className="flex min-h-[240px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50/50">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+          <p className="mt-3 text-sm text-slate-500">Loading stats…</p>
+        </div>
       </div>
     )
   }
@@ -73,95 +79,151 @@ export default function OwnerStatsPage() {
     )
   }
 
-  if (!stats) {
-    return null
-  }
+  if (!stats) return null
 
   const currency = stats.currency || 'USD'
+  const revenueFormatter = (n: number) => formatCurrency(n, currency)
+
+  const ordersChartData = [
+    { name: 'Today', value: stats.ordersToday },
+    { name: 'This week', value: stats.ordersThisWeek },
+    { name: 'This month', value: stats.ordersThisMonth },
+  ]
+
+  const revenueChartData = [
+    { name: 'Today', value: stats.revenueToday },
+    { name: 'This week', value: stats.revenueThisWeek },
+    { name: 'This month', value: stats.revenueThisMonth },
+  ]
 
   return (
-    <div>
-      <h2 className="mb-4 text-lg font-semibold text-slate-900">Your restaurant stats</h2>
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Orders today</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.ordersToday}</p>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-bold text-slate-900">Your restaurant stats</h2>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-60"
+        >
+          <span
+            className={`inline-block h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+          >
+            ↻
+          </span>
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </div>
+
+      {/* Overview KPIs */}
+      <section>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Overview
+        </h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            label="Orders today"
+            value={stats.ordersToday}
+            accent="emerald"
+          />
+          <StatCard
+            label="Revenue today"
+            value={formatCurrency(stats.revenueToday, currency)}
+            accent="blue"
+          />
+          <StatCard
+            label="Avg order value"
+            value={
+              stats.avgOrderValue != null
+                ? formatCurrency(stats.avgOrderValue, currency)
+                : '—'
+            }
+            accent="violet"
+          />
+          <StatCard
+            label="Total orders"
+            value={stats.totalOrders}
+            sublabel="All time"
+            accent="slate"
+          />
         </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Orders this week</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.ordersThisWeek}</p>
+      </section>
+
+      {/* Charts */}
+      <section className="grid gap-6 lg:grid-cols-2">
+        <BarChartCard
+          title="Orders by period"
+          data={ordersChartData}
+        />
+        <BarChartCard
+          title="Revenue by period"
+          data={revenueChartData}
+          valueFormatter={revenueFormatter}
+          barColors={['#3b82f6', '#60a5fa', '#93c5fd']}
+        />
+      </section>
+
+      {/* Revenue breakdown */}
+      <section>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Revenue
+        </h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            label="Today"
+            value={formatCurrency(stats.revenueToday, currency)}
+            accent="slate"
+          />
+          <StatCard
+            label="This week"
+            value={formatCurrency(stats.revenueThisWeek, currency)}
+            accent="slate"
+          />
+          <StatCard
+            label="This month"
+            value={formatCurrency(stats.revenueThisMonth, currency)}
+            accent="slate"
+          />
+          <StatCard
+            label="Total revenue"
+            value={formatCurrency(stats.totalRevenue, currency)}
+            accent="emerald"
+          />
         </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Orders this month</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.ordersThisMonth}</p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Total orders</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{stats.totalOrders}</p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Revenue today</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {formatCurrency(stats.revenueToday, currency)}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Revenue this week</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {formatCurrency(stats.revenueThisWeek, currency)}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Revenue this month</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {formatCurrency(stats.revenueThisMonth, currency)}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Total revenue</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {formatCurrency(stats.totalRevenue, currency)}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Avg order value</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {stats.avgOrderValue != null
-              ? formatCurrency(stats.avgOrderValue, currency)
-              : '—'}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Waiter calls handled</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {stats.waiterCallsHandled}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Waiter calls (this week)</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {stats.waiterCallsHandledThisWeek}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Avg waiter response (min)</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {typeof stats.avgWaiterResponseMinutes === 'number'
-              ? stats.avgWaiterResponseMinutes.toFixed(1)
-              : '—'}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Chat sessions (total)</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {stats.chatSessionsTotal}
-          </p>
-        </div>
-        <div className={CARD_CLASS}>
-          <p className="text-xs font-medium text-slate-500">Chat sessions (this week)</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">
-            {stats.chatSessionsThisWeek}
-          </p>
+      </section>
+
+      {/* Operations */}
+      <section>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Operations & engagement
+        </h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Waiter calls handled"
+            value={stats.waiterCallsHandled}
+            sublabel="All time"
+            accent="amber"
+          />
+          <StatCard
+            label="Waiter calls (this week)"
+            value={stats.waiterCallsHandledThisWeek}
+            accent="slate"
+          />
+          <StatCard
+            label="Avg response time"
+            value={
+              typeof stats.avgWaiterResponseMinutes === 'number'
+                ? `${stats.avgWaiterResponseMinutes.toFixed(1)} min`
+                : '—'
+            }
+            accent="slate"
+          />
+          <StatCard
+            label="Chat sessions"
+            value={stats.chatSessionsTotal}
+            sublabel={`${stats.chatSessionsThisWeek} this week`}
+            accent="violet"
+          />
         </div>
       </section>
     </div>

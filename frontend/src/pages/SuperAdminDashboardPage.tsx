@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { useSuperAdminAuth } from '../components/SuperAdminAuthContext'
 import { apiFetch } from '../lib/api'
 import type { Restaurant } from '../components/types'
+import { BarChartCard, StatCard } from '../components/stats'
 
 interface ListItem {
   restaurant: Restaurant & { createdAt?: string; updatedAt?: string }
@@ -80,6 +81,7 @@ export default function SuperAdminDashboardPage() {
   const [replyText, setReplyText] = useState('')
   const [replySaving, setReplySaving] = useState(false)
   const [markingReadId, setMarkingReadId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'restaurants' | 'stats'>('restaurants')
 
   const fetchStats = useCallback(async () => {
     if (!token) return
@@ -350,96 +352,143 @@ export default function SuperAdminDashboardPage() {
           </div>
         )}
 
-        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Restaurants</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.totalRestaurants ?? '—'}
-            </p>
+        <div className="mb-6 flex gap-0.5 rounded-lg bg-slate-100/80 p-0.5">
+          <button
+            type="button"
+            onClick={() => setActiveTab('restaurants')}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'restaurants'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Restaurants
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('stats')}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'stats'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Stats
+          </button>
+        </div>
+
+        {activeTab === 'stats' && (
+        <section className="mb-8 space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-bold text-slate-900">Platform stats</h2>
+            <button
+              type="button"
+              onClick={() => fetchStats()}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              <span className="inline-block">↻</span>
+              Refresh
+            </button>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Total orders</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.totalOrders ?? '—'}
-            </p>
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+              Overview
+            </h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatCard
+                label="Restaurants"
+                value={stats?.totalRestaurants ?? '—'}
+                accent="emerald"
+              />
+              <StatCard
+                label="Total orders"
+                value={stats?.totalOrders ?? '—'}
+                accent="blue"
+              />
+              <StatCard
+                label="Orders today"
+                value={stats?.ordersToday ?? '—'}
+                accent="violet"
+              />
+              <StatCard
+                label="Total revenue"
+                value={
+                  typeof stats?.totalRevenue === 'number'
+                    ? new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      }).format(stats.totalRevenue)
+                    : '—'
+                }
+                accent="slate"
+              />
+            </div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Orders today</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.ordersToday ?? '—'}
-            </p>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <BarChartCard
+              title="Orders by period"
+              data={[
+                { name: 'Today', value: stats?.ordersToday ?? 0 },
+                { name: 'This week', value: stats?.ordersThisWeek ?? 0 },
+                { name: 'This month', value: stats?.ordersThisMonth ?? 0 },
+              ]}
+            />
+            <BarChartCard
+              title="Platform engagement (this week)"
+              data={[
+                { name: 'Waiter calls', value: stats?.waiterCallsHandledThisWeek ?? 0 },
+                { name: 'Chat sessions', value: stats?.chatSessionsThisWeek ?? 0 },
+              ]}
+              barColors={['#f59e0b', '#8b5cf6']}
+            />
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Orders this week</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.ordersThisWeek ?? '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Orders this month</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.ordersThisMonth ?? '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Total revenue</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {typeof stats?.totalRevenue === 'number'
-                ? new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(stats.totalRevenue)
-                : '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Open waiter calls</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.openWaiterCalls ?? '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Waiter calls handled</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.waiterCallsHandled ?? '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Waiter calls handled (week)</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.waiterCallsHandledThisWeek ?? '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Avg waiter response (min)</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {typeof stats?.avgWaiterResponseMinutes === 'number'
-                ? stats.avgWaiterResponseMinutes.toFixed(1)
-                : '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Chat sessions (total)</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.chatSessionsTotal ?? '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Chat sessions (this week)</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.chatSessionsThisWeek ?? '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium text-slate-500">Feedback / bugs</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">
-              {stats?.totalFeedback ?? '—'}
-            </p>
+
+          <div>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
+              Operations & support
+            </h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <StatCard
+                label="Open waiter calls"
+                value={stats?.openWaiterCalls ?? '—'}
+                accent="amber"
+              />
+              <StatCard
+                label="Waiter calls handled"
+                value={stats?.waiterCallsHandled ?? '—'}
+                accent="slate"
+              />
+              <StatCard
+                label="Avg response (min)"
+                value={
+                  typeof stats?.avgWaiterResponseMinutes === 'number'
+                    ? stats.avgWaiterResponseMinutes.toFixed(1)
+                    : '—'
+                }
+                accent="slate"
+              />
+              <StatCard
+                label="Chat sessions"
+                value={stats?.chatSessionsTotal ?? '—'}
+                sublabel={`${stats?.chatSessionsThisWeek ?? 0} this week`}
+                accent="violet"
+              />
+              <StatCard
+                label="Feedback / bugs"
+                value={stats?.totalFeedback ?? '—'}
+                accent="slate"
+              />
+            </div>
           </div>
         </section>
+        )}
 
+        {activeTab === 'restaurants' && (
+        <>
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 bg-slate-50/80 px-5 py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -667,6 +716,8 @@ export default function SuperAdminDashboardPage() {
             )}
           </div>
         </section>
+        </>
+        )}
       </main>
 
       {/* Edit modal */}
