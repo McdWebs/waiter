@@ -17,6 +17,8 @@ export interface RestaurantDocument extends Document {
   orderLeadTimeMinutes?: number
   /** Custom instructions for the AI waiter (tone, what to emphasize, how to behave). */
   aiInstructions?: string
+  /** When true, restaurant is disabled (no menu/orders); super-admin only. */
+  isSuspended?: boolean
 }
 
 const restaurantSchema = new Schema<RestaurantDocument>({
@@ -35,6 +37,7 @@ const restaurantSchema = new Schema<RestaurantDocument>({
   allowOrders: { type: Boolean, default: true },
   orderLeadTimeMinutes: { type: Number, default: 15 },
   aiInstructions: { type: String },
+  isSuspended: { type: Boolean, default: false },
 })
 
 export const Restaurant = model<RestaurantDocument>('Restaurant', restaurantSchema)

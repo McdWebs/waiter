@@ -17,6 +17,9 @@ router.get('/restaurants/:slug/menu', async (req, res) => {
     if (!restaurant) {
       return res.status(404).json({ message: 'Restaurant not found' })
     }
+    if (restaurant.isSuspended) {
+      return res.status(404).json({ message: 'Restaurant not found' })
+    }
 
     const categories = await MenuCategory.find({ restaurantId: restaurant._id })
       .sort({ position: 1, name: 1 })

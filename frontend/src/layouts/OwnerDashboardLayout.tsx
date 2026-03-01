@@ -15,8 +15,18 @@ export default function OwnerDashboardLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white shadow-sm shadow-slate-200/50">
-        <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4">
+      <div className="sticky top-0 z-20">
+        {restaurant?.isSuspended && (
+          <div
+            className="border-b border-amber-300 bg-amber-100 px-3 py-2.5 text-center text-sm font-medium text-amber-900"
+            role="alert"
+          >
+            Your restaurant is currently suspended. The public menu and new orders are disabled.
+            Contact support if you believe this is an error.
+          </div>
+        )}
+        <header className="border-b border-slate-200/80 bg-white shadow-sm shadow-slate-200/50">
+          <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4">
           <div className="min-w-0 flex-shrink-0">
             <h1 className="truncate text-base font-bold tracking-tight text-slate-900">
               {restaurant?.name ?? 'Your restaurant'}
@@ -87,7 +97,8 @@ export default function OwnerDashboardLayout() {
             </div>
           </div>
         </div>
-      </header>
+        </header>
+      </div>
       {showSignOutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl">

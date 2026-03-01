@@ -175,5 +175,77 @@ router.get('/auth/me', async (req, res) => {
   }
 })
 
+// Super-admin login: env-based (SUPER_ADMIN_EMAILS + SUPER_ADMIN_PASSWORD)
+router.post('/auth/super-admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body as { email?: string; password?: string }
+
+    if (!email || !email.trim() || !password) {
+      return res.status(400).json({ message: 'Email and password are required' })
+    }
+
+    const jwtSecret = process.env.JWT_SECRET
+    const allowedEmails = process.env.SUPER_ADMIN_EMAILS
+    const expectedPassword = process.env.SUPER_ADMIN_PASSWORD
+
+    if (!jwtSecret || !allowedEmails || expectedPassword === undefined) {
+      return res.status(500).json({ message: 'Super-admin auth is not configured' })
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+    const emails = allowedEmails.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
+    if (!emails.includes(normalizedEmail) || password !== expectedPassword) {
+      return res.status(401).json({ message: 'Invalid email or password' })
+    }
+
+    const token = jwt.sign(
+      { isSuperAdmin: true, superAdminEmail: normalizedEmail },
+      jwtSecret,
+      { expiresIn: '12h' }
+    )
+
+    return res.json({
+      token,
+      superAdmin: { email: normalizedEmail },
+    })
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err)
+    return res.status(500).json({ message: 'Failed to log in' })
+  }
+})
+
+router.get('/auth/super-admin/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    const token = authHeader.slice('Bearer '.length)
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      return res.status(500).json({ message: 'Auth is not configured' })
+    }
+
+    const decoded = jwt.verify(token, jwtSecret) as {
+      isSuperAdmin?: boolean
+      superAdminEmail?: string
+    }
+
+    if (!decoded.isSuperAdmin || !decoded.superAdminEmail) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    return res.json({
+      superAdmin: { email: decoded.superAdminEmail },
+    })
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err)
+    return res.status(401).json({ message: 'Unauthorized' })
+  }
+})
+
 export default router
 

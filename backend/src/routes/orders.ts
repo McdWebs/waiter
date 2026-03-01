@@ -3,6 +3,7 @@ import { Types } from 'mongoose'
 import { Order } from '../models/Order'
 import { OrderItem } from '../models/OrderItem'
 import { MenuItem } from '../models/MenuItem'
+import { Restaurant } from '../models/Restaurant'
 import { WaiterCall } from '../models/WaiterCall'
 import { io } from '../server'
 
@@ -20,6 +21,12 @@ router.post('/orders', async (req, res) => {
     if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
       return res.status(400).json({ message: 'Invalid restaurantId' })
     }
+
+    const restaurant = await Restaurant.findById(restaurantId).select({ isSuspended: 1 }).lean()
+    if (!restaurant || restaurant.isSuspended) {
+      return res.status(404).json({ message: 'Restaurant not found' })
+    }
+
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'Order must contain at least one item' })
     }

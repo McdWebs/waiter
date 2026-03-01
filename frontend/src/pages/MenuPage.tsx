@@ -46,6 +46,7 @@ function MenuPageInner() {
   const [cartOpen, setCartOpen] = useState(false)
   const [billOpen, setBillOpen] = useState(false)
   const [itemDetailOpen, setItemDetailOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const tableFromUrl = searchParams.get('table') ?? undefined
   const tableKey = tableFromUrl ?? 'default'
   const latestOrderIdRef = useRef<string | null>(null)
@@ -159,6 +160,21 @@ function MenuPageInner() {
 
   const currencySymbol = getCurrencySymbol(data.restaurant.currency)
 
+  const query = searchQuery.trim().toLowerCase()
+  const filteredCategories = query
+    ? data.categories
+        .map((cat) => ({
+          ...cat,
+          items: cat.items.filter(
+            (item) =>
+              item.name.toLowerCase().includes(query) ||
+              (item.description && item.description.toLowerCase().includes(query)) ||
+              item.tags?.some((t) => t.toLowerCase().includes(query))
+          )
+        }))
+        .filter((cat) => cat.items.length > 0)
+    : data.categories
+
   return (
     <div className="min-h-screen bg-slate-50 pb-20 text-slate-900">
       <div className="mx-auto max-w-md px-4 pb-4 pt-6">
@@ -189,8 +205,22 @@ function MenuPageInner() {
             </p>
           )}
         </header>
-        <nav className="sticky top-0 z-20 mb-4 flex justify-center gap-2 overflow-x-auto bg-transparent pb-1 pt-1 text-xs">
-          {data.categories.map((cat) => (
+        <div className="sticky top-0 z-20 mb-3 -mx-1 bg-slate-50 px-1 pt-1 pb-2">
+          <label htmlFor="menu-search" className="sr-only">
+            Search menu
+          </label>
+          <input
+            id="menu-search"
+            type="search"
+            placeholder="Search dishes…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+          />
+        </div>
+        {/* Category quick-jump nav – commented out for now
+        <nav className="sticky top-12 z-20 mb-4 flex justify-center gap-2 overflow-x-auto bg-transparent pb-1 pt-1 text-xs">
+          {filteredCategories.map((cat) => (
             <button
               key={cat._id}
               type="button"
@@ -206,25 +236,32 @@ function MenuPageInner() {
             </button>
           ))}
         </nav>
+        */}
         <main className="space-y-6 pb-4">
-          {data.categories.map((cat) => (
-            <section key={cat._id} id={`cat-${cat._id}`} className="scroll-mt-24">
-              <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-800 uppercase">
-                {cat.name}
-              </h2>
-              <div className="space-y-2">
-                {cat.items.map((item) => (
-                  <MenuItemCard
-                  key={item._id}
-                  item={item}
-                  currencySymbol={currencySymbol}
-                  onDetailOpen={() => setItemDetailOpen(true)}
-                  onDetailClose={() => setItemDetailOpen(false)}
-                />
-                ))}
-              </div>
-            </section>
-          ))}
+          {filteredCategories.length === 0 ? (
+            <p className="py-6 text-center text-sm text-slate-500">
+              No items match &quot;{searchQuery}&quot;. Try a different search.
+            </p>
+          ) : (
+            filteredCategories.map((cat) => (
+              <section key={cat._id} id={`cat-${cat._id}`} className="scroll-mt-24">
+                <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-800 uppercase">
+                  {cat.name}
+                </h2>
+                <div className="space-y-2">
+                  {cat.items.map((item) => (
+                    <MenuItemCard
+                      key={item._id}
+                      item={item}
+                      currencySymbol={currencySymbol}
+                      onDetailOpen={() => setItemDetailOpen(true)}
+                      onDetailClose={() => setItemDetailOpen(false)}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))
+          )}
         </main>
       </div>
       {!itemDetailOpen && (

@@ -80,7 +80,7 @@ export default function OwnerSignupPage() {
               id="restaurantSlug"
               name="restaurantSlug"
               className="w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-              placeholder="demo-bistro"
+              placeholder="my-restaurant"
             />
             <p className="mt-1 text-[11px] text-slate-500">
               This will be used in links like <code>/restaurant/your-slug/menu</code>. If you leave it

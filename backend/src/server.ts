@@ -10,6 +10,8 @@ import orderRoutes from './routes/orders'
 import tableRoutes from './routes/tables'
 import chatRoutes from './routes/chat'
 import authRoutes from './routes/auth'
+import superAdminRoutes from './routes/superAdmin'
+import { authenticateSuperAdmin } from './middleware/auth'
 
 const app = express()
 
@@ -25,6 +27,7 @@ const uploadsDir = path.join(process.cwd(), 'uploads')
 app.use('/uploads', express.static(uploadsDir))
 
 app.use('/api', authRoutes)
+app.use('/api/super-admin', authenticateSuperAdmin, superAdminRoutes)
 app.use('/api', menuRoutes)
 app.use('/api', orderRoutes)
 app.use('/api', tableRoutes)

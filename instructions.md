@@ -1,6 +1,6 @@
-for further implementation
+for further implementation:
 
-super admin
+super admin - √
 
 feedback / bug report
 

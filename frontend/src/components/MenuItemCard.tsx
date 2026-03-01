@@ -27,13 +27,36 @@ export default function MenuItemCard({ item, currencySymbol, onDetailOpen, onDet
   const inCart = items.find((cartItem) => cartItem.menuItemId === item._id)
   const isAvailable = item.available ?? true
 
+  const cardImageHeight = 'h-20'
+  const placeholderImage = (
+    <div
+      className={`flex w-full items-center justify-center bg-gradient-to-br from-amber-50/90 to-orange-50/80 ${cardImageHeight}`}
+      aria-hidden
+    >
+      <svg
+        className="h-8 w-8 text-amber-300/90"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1}
+          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    </div>
+  )
+
   return (
     <>
       <div
         role="button"
         tabIndex={0}
-        className={`w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition cursor-pointer ${
-          isAvailable ? 'hover:border-emerald-200 hover:shadow-md' : 'opacity-60'
+        className={`group flex w-full overflow-hidden rounded-xl border border-slate-200/90 bg-white text-left shadow-sm transition cursor-pointer ${
+          isAvailable ? 'hover:border-emerald-300/80 hover:shadow-md' : 'opacity-60'
         }`}
         onClick={openDetails}
         onKeyDown={(e) => {
@@ -43,25 +66,29 @@ export default function MenuItemCard({ item, currencySymbol, onDetailOpen, onDet
           }
         }}
       >
-        {item.imageUrl ? (
-          <div className="relative h-40 w-full overflow-hidden">
+        <div className={`relative w-24 shrink-0 overflow-hidden bg-slate-100 ${cardImageHeight}`}>
+          {item.imageUrl ? (
             <img
               src={item.imageUrl}
               alt={item.name}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.05]"
             />
-          </div>
-        ) : null}
-        <div className="flex items-start justify-between gap-3 p-4">
-          <div className="flex-1">
-            <div className="text-sm font-semibold text-slate-900 line-clamp-2">{item.name}</div>
-            <p className="mt-1 text-xs text-slate-600 line-clamp-2">{item.description}</p>
-            {item.tags.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1">
+          ) : (
+            placeholderImage
+          )}
+        </div>
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-slate-900 truncate">{item.name}</h3>
+            <div className="mt-0.5 text-xs font-medium text-slate-600">
+              {currencySymbol}{item.price.toFixed(2)}
+            </div>
+            {(item.tags?.length ?? 0) > 0 ? (
+              <div className="mt-1 flex flex-wrap gap-1">
                 {item.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700"
+                    className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700"
                   >
                     {tag}
                   </span>
@@ -69,16 +96,36 @@ export default function MenuItemCard({ item, currencySymbol, onDetailOpen, onDet
               </div>
             ) : null}
           </div>
-          <div className="shrink-0 text-right">
-            <div className="text-xs font-medium text-slate-500">
-              {currencySymbol}
-              {item.price.toFixed(2)}
-            </div>
+          <div className="shrink-0 self-center">
             {isAvailable ? (
-              <>
+              inCart ? (
+                <div className="flex items-center gap-1 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-700">
+                  <button
+                    type="button"
+                    className="flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateItem(item._id, inCart.quantity - 1)
+                    }}
+                  >
+                    −
+                  </button>
+                  <span className="min-w-[1rem] text-center font-semibold">{inCart.quantity}</span>
+                  <button
+                    type="button"
+                    className="flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateItem(item._id, inCart.quantity + 1)
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  className="mt-1 rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
+                  className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700"
                   onClick={(e) => {
                     e.stopPropagation()
                     addItem(item, 1)
@@ -86,57 +133,43 @@ export default function MenuItemCard({ item, currencySymbol, onDetailOpen, onDet
                 >
                   Add
                 </button>
-                {inCart ? (
-                  <div className="mt-1 flex items-center justify-end gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
-                    <span>In cart</span>
-                    <button
-                      type="button"
-                      className="h-4 w-4 rounded-full border border-slate-400 text-[11px] leading-[14px]"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updateItem(item._id, inCart.quantity - 1)
-                      }}
-                    >
-                      −
-                    </button>
-                    <span className="min-w-[1.25rem] text-center font-semibold">
-                      {inCart.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      className="h-4 w-4 rounded-full border border-slate-400 text-[11px] leading-[14px]"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updateItem(item._id, inCart.quantity + 1)
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
-                ) : null}
-              </>
+              )
             ) : (
-              <div className="mt-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-medium text-slate-500">
-                Unavailable
-              </div>
+              <span className="text-[10px] font-medium text-slate-400">Unavailable</span>
             )}
           </div>
         </div>
       </div>
 
       {showDetails ? (
-        <div className="fixed inset-0 z-30 flex items-end bg-black/40 sm:items-center">
-          <div className="w-full rounded-t-3xl bg-white sm:max-w-md sm:rounded-3xl sm:mx-auto shadow-xl overflow-hidden">
-            {item.imageUrl ? (
-              <div className="relative h-48 w-full">
+        <div className="fixed inset-0 z-30 flex items-end bg-black/50 backdrop-blur-sm sm:items-center">
+          <div className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl bg-white sm:max-w-md sm:rounded-3xl sm:mx-auto shadow-2xl overflow-hidden">
+            <div className="relative h-52 w-full shrink-0 bg-slate-100">
+              {item.imageUrl ? (
                 <img
                   src={item.imageUrl}
                   alt={item.name}
                   className="h-full w-full object-cover"
                 />
-              </div>
-            ) : null}
-            <div className="p-4">
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-amber-50/90 to-orange-50/80">
+                  <svg
+                    className="h-20 w-20 text-amber-300/90"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <div className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <h2 className="text-lg font-semibold text-slate-900">{item.name}</h2>
