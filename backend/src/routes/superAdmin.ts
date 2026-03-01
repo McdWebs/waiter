@@ -8,8 +8,56 @@ import { Table } from '../models/Table'
 import { Order } from '../models/Order'
 import { OrderItem } from '../models/OrderItem'
 import { WaiterCall } from '../models/WaiterCall'
+import { OwnerFeedback } from '../models/OwnerFeedback'
 
 const router = express.Router()
+
+router.get('/feedback', async (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || 50), 10)))
+    const feedback = await OwnerFeedback.find()
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
+    return res.json({ items: feedback })
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err)
+    return res.status(500).json({ message: 'Failed to list feedback' })
+  }
+})
+
+router.patch('/feedback/:id', async (req, res) => {
+  try {
+    const id = String(req.params.id)
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid feedback id' })
+    }
+    const body = req.body as { status?: string; adminReply?: string }
+    const update: Record<string, unknown> = {}
+    if (body.status === 'read' || body.status === 'replied') {
+      update.status = body.status
+    }
+    if (typeof body.adminReply === 'string') {
+      const trimmed = body.adminReply.trim()
+      update.adminReply = trimmed
+      update.adminRepliedAt = new Date()
+      update.status = 'replied'
+    }
+    if (Object.keys(update).length === 0) {
+      return res.status(400).json({ message: 'Provide status and/or adminReply' })
+    }
+    const feedback = await OwnerFeedback.findByIdAndUpdate(id, update, { new: true }).lean()
+    if (!feedback) {
+      return res.status(404).json({ message: 'Feedback not found' })
+    }
+    return res.json(feedback)
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err)
+    return res.status(500).json({ message: 'Failed to update feedback' })
+  }
+})
 
 router.get('/restaurants', async (req, res) => {
   try {
@@ -88,20 +136,23 @@ router.get('/restaurants/:id', async (req, res) => {
 
 router.get('/stats', async (req, res) => {
   try {
-    const [totalRestaurants, totalOrders, ordersToday, openWaiterCalls] = await Promise.all([
-      Restaurant.countDocuments(),
-      Order.countDocuments(),
-      Order.countDocuments({
-        createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-      }),
-      WaiterCall.countDocuments({ status: 'open' }),
-    ])
+    const [totalRestaurants, totalOrders, ordersToday, openWaiterCalls, totalFeedback] =
+      await Promise.all([
+        Restaurant.countDocuments(),
+        Order.countDocuments(),
+        Order.countDocuments({
+          createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        }),
+        WaiterCall.countDocuments({ status: 'open' }),
+        OwnerFeedback.countDocuments(),
+      ])
 
     return res.json({
       totalRestaurants,
       totalOrders,
       ordersToday,
       openWaiterCalls,
+      totalFeedback,
     })
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -202,6 +253,7 @@ router.delete('/restaurants/:id', async (req, res) => {
     await MenuItem.deleteMany({ categoryId: { $in: categoryIds } })
     await MenuCategory.deleteMany({ restaurantId: rid })
     await RestaurantOwner.deleteOne({ restaurantId: rid })
+    await OwnerFeedback.deleteMany({ restaurantId: rid })
     await Restaurant.findByIdAndDelete(rid)
 
     return res.status(204).send()

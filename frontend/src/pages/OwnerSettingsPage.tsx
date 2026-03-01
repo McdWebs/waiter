@@ -439,6 +439,7 @@ export default function OwnerSettingsPage() {
           </div>
         </div>
 
+        {/* Tax & service charge – commented out for now
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
           <h2 className="text-sm font-semibold text-slate-900">Tax & service charge</h2>
           <p className="mt-1 text-xs text-slate-500">
@@ -487,6 +488,7 @@ export default function OwnerSettingsPage() {
             </div>
           </div>
         </div>
+        */}
 
         {error && (
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">

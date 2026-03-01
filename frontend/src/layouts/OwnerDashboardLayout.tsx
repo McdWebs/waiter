@@ -58,6 +58,18 @@ export default function OwnerDashboardLayout() {
               >
                 Settings
               </NavLink>
+              <NavLink
+                to="/owner/feedback"
+                className={({ isActive }) =>
+                  `rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation inline-flex items-center ${
+                    isActive
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`
+                }
+              >
+                Feedback
+              </NavLink>
             </nav>
             {restaurant?.slug && (
               <a
@@ -125,6 +137,7 @@ export default function OwnerDashboardLayout() {
           </div>
         </div>
       )}
+
       <main className="mx-auto w-full max-w-5xl px-3 py-4 sm:px-4 sm:py-6">
         <Outlet />
       </main>

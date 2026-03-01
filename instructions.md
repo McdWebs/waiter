@@ -2,7 +2,7 @@ for further implementation:
 
 super admin - √
 
-feedback / bug report
+feedback / bug report - √
 
 connection to printers
 

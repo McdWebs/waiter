@@ -19,6 +19,20 @@ interface Stats {
   totalOrders: number
   ordersToday: number
   openWaiterCalls: number
+  totalFeedback?: number
+}
+
+interface FeedbackItem {
+  _id: string
+  restaurantId: string
+  restaurantName: string
+  ownerEmail: string
+  type: 'feedback' | 'bug'
+  message: string
+  status: 'new' | 'read' | 'replied'
+  adminReply?: string
+  adminRepliedAt?: string
+  createdAt: string
 }
 
 interface RestaurantDetail {
@@ -52,6 +66,12 @@ export default function SuperAdminDashboardPage() {
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([])
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [replyingId, setReplyingId] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
+  const [replySaving, setReplySaving] = useState(false)
+  const [markingReadId, setMarkingReadId] = useState<string | null>(null)
 
   const fetchStats = useCallback(async () => {
     if (!token) return
@@ -85,9 +105,72 @@ export default function SuperAdminDashboardPage() {
     }
   }, [token, search])
 
+  const fetchFeedback = useCallback(async () => {
+    if (!token) return
+    setFeedbackLoading(true)
+    try {
+      const data = await apiFetch<{ items: FeedbackItem[] }>('/api/super-admin/feedback', {
+        token,
+      })
+      setFeedbackList(data.items)
+    } catch {
+      setFeedbackList([])
+    } finally {
+      setFeedbackLoading(false)
+    }
+  }, [token])
+
   useEffect(() => {
     fetchStats()
   }, [fetchStats])
+
+  useEffect(() => {
+    fetchFeedback()
+  }, [fetchFeedback])
+
+  const handleMarkFeedbackRead = useCallback(
+    async (id: string) => {
+      if (!token) return
+      setMarkingReadId(id)
+      try {
+        await apiFetch(`/api/super-admin/feedback/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'read' }),
+          token,
+        })
+        await fetchFeedback()
+        await fetchStats()
+      } catch {
+        // ignore
+      } finally {
+        setMarkingReadId(null)
+      }
+    },
+    [token, fetchFeedback, fetchStats]
+  )
+
+  const handleReplySubmit = useCallback(
+    async (id: string) => {
+      if (!token || !replyText.trim()) return
+      setReplySaving(true)
+      try {
+        await apiFetch(`/api/super-admin/feedback/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ adminReply: replyText.trim() }),
+          token,
+        })
+        setReplyingId(null)
+        setReplyText('')
+        await fetchFeedback()
+        await fetchStats()
+      } catch {
+        // ignore
+      } finally {
+        setReplySaving(false)
+      }
+    },
+    [token, replyText, fetchFeedback, fetchStats]
+  )
 
   useEffect(() => {
     fetchList()
@@ -259,7 +342,7 @@ export default function SuperAdminDashboardPage() {
           </div>
         )}
 
-        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium text-slate-500">Restaurants</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">
@@ -282,6 +365,12 @@ export default function SuperAdminDashboardPage() {
             <p className="text-xs font-medium text-slate-500">Open waiter calls</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">
               {stats?.openWaiterCalls ?? '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Feedback / bugs</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {stats?.totalFeedback ?? '—'}
             </p>
           </div>
         </section>
@@ -385,6 +474,129 @@ export default function SuperAdminDashboardPage() {
                   ))}
                 </tbody>
               </table>
+            )}
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-4 py-3">
+            <h2 className="text-sm font-semibold text-slate-900">Feedback / Bug reports</h2>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Messages from restaurant owners (feedback and bug reports).
+            </p>
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            {feedbackLoading ? (
+              <div className="px-4 py-8 text-center text-sm text-slate-500">Loading…</div>
+            ) : feedbackList.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-slate-500">
+                No feedback or bug reports yet.
+              </div>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {feedbackList.map((item) => (
+                  <li key={item._id} className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span
+                        className={
+                          item.type === 'bug'
+                            ? 'rounded-full bg-rose-100 px-2 py-0.5 font-medium text-rose-800'
+                            : 'rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-700'
+                        }
+                      >
+                        {item.type === 'bug' ? 'Bug' : 'Feedback'}
+                      </span>
+                      <span
+                        className={
+                          (item.status ?? 'new') === 'replied'
+                            ? 'rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-800'
+                            : (item.status ?? 'new') === 'read'
+                              ? 'rounded-full bg-sky-100 px-2 py-0.5 font-medium text-sky-800'
+                              : 'rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-800'
+                        }
+                      >
+                        {(item.status ?? 'new') === 'new'
+                          ? 'New'
+                          : (item.status ?? 'new') === 'read'
+                            ? 'Seen'
+                            : 'Replied'}
+                      </span>
+                      <span className="font-medium text-slate-900">{item.restaurantName}</span>
+                      <span className="text-slate-500">{item.ownerEmail}</span>
+                      <span className="text-slate-400">
+                        {new Date(item.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm text-slate-700 whitespace-pre-wrap">{item.message}</p>
+                    {(item.status ?? 'new') === 'replied' && item.adminReply && (
+                      <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                        <p className="text-[11px] font-medium text-slate-600">Your reply</p>
+                        <p className="mt-0.5 text-sm text-slate-700 whitespace-pre-wrap">
+                          {item.adminReply}
+                        </p>
+                        {item.adminRepliedAt && (
+                          <p className="mt-1 text-[10px] text-slate-500">
+                            {new Date(item.adminRepliedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {(item.status ?? 'new') === 'new' && (
+                        <button
+                          type="button"
+                          disabled={markingReadId === item._id}
+                          onClick={() => handleMarkFeedbackRead(item._id)}
+                          className="rounded bg-sky-100 px-2 py-1 text-xs font-medium text-sky-800 hover:bg-sky-200 disabled:opacity-50"
+                        >
+                          {markingReadId === item._id ? 'Updating…' : 'Mark as read'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReplyingId(replyingId === item._id ? null : item._id)
+                          setReplyText(item.adminReply ?? '')
+                        }}
+                        className="rounded bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-300"
+                      >
+                        {replyingId === item._id ? 'Cancel reply' : 'Reply'}
+                      </button>
+                    </div>
+                    {replyingId === item._id && (
+                      <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2">
+                        <textarea
+                          rows={3}
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Type your reply to the owner…"
+                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none"
+                        />
+                        <div className="mt-2 flex justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingId(null)
+                              setReplyText('')
+                            }}
+                            className="rounded bg-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-300"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={replySaving || !replyText.trim()}
+                            onClick={() => handleReplySubmit(item._id)}
+                            className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {replySaving ? 'Sending…' : 'Send reply'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         </section>
