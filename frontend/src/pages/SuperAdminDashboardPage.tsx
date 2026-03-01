@@ -18,8 +18,16 @@ interface Stats {
   totalRestaurants: number
   totalOrders: number
   ordersToday: number
+  ordersThisWeek?: number
+  ordersThisMonth?: number
   openWaiterCalls: number
+  waiterCallsHandled?: number
+  waiterCallsHandledThisWeek?: number
+  avgWaiterResponseMinutes?: number | null
   totalFeedback?: number
+  chatSessionsTotal?: number
+  chatSessionsThisWeek?: number
+  totalRevenue?: number
 }
 
 interface FeedbackItem {
@@ -342,7 +350,7 @@ export default function SuperAdminDashboardPage() {
           </div>
         )}
 
-        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium text-slate-500">Restaurants</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">
@@ -362,9 +370,66 @@ export default function SuperAdminDashboardPage() {
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Orders this week</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {stats?.ordersThisWeek ?? '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Orders this month</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {stats?.ordersThisMonth ?? '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Total revenue</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {typeof stats?.totalRevenue === 'number'
+                ? new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                  }).format(stats.totalRevenue)
+                : '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-medium text-slate-500">Open waiter calls</p>
             <p className="mt-1 text-2xl font-semibold text-slate-900">
               {stats?.openWaiterCalls ?? '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Waiter calls handled</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {stats?.waiterCallsHandled ?? '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Waiter calls handled (week)</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {stats?.waiterCallsHandledThisWeek ?? '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Avg waiter response (min)</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {typeof stats?.avgWaiterResponseMinutes === 'number'
+                ? stats.avgWaiterResponseMinutes.toFixed(1)
+                : '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Chat sessions (total)</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {stats?.chatSessionsTotal ?? '—'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium text-slate-500">Chat sessions (this week)</p>
+            <p className="mt-1 text-2xl font-semibold text-slate-900">
+              {stats?.chatSessionsThisWeek ?? '—'}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

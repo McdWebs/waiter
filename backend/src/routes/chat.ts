@@ -1,6 +1,7 @@
 import express from 'express'
 import { Types } from 'mongoose'
 import { menuChat } from '../services/menuAssistant'
+import { ChatEvent } from '../models/ChatEvent'
 
 const router = express.Router()
 
@@ -20,6 +21,10 @@ router.post('/chat', async (req, res) => {
     }
 
     const { reply, suggestions } = await menuChat({ restaurantId, messages, cartSummary })
+
+    await ChatEvent.create({ restaurantId: new Types.ObjectId(restaurantId) }).catch(() => {
+      // Non-blocking: do not fail the request if logging fails
+    })
 
     return res.json({ reply, suggestions })
   } catch (err) {

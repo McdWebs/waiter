@@ -26,89 +26,99 @@ export default function OwnerDashboardLayout() {
           </div>
         )}
         <header className="border-b border-slate-200/80 bg-white shadow-sm shadow-slate-200/50">
-          <div className="mx-auto flex max-w-5xl flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4">
-          <div className="min-w-0 flex-shrink-0">
-            <h1 className="truncate text-base font-bold tracking-tight text-slate-900">
+          <div className="mx-auto flex max-w-5xl flex-nowrap items-center gap-2 overflow-x-auto px-2 py-1.5 sm:gap-3 sm:overflow-visible sm:px-4 sm:py-2">
+            <h1 className="min-w-0 flex-shrink truncate text-sm font-bold tracking-tight text-slate-900 sm:min-w-[8rem] sm:text-base">
               {restaurant?.name ?? 'Your restaurant'}
             </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <nav className="flex items-center gap-0.5 rounded-lg bg-slate-100/80 p-0.5">
-              <NavLink
-                to="/owner/menu"
-                className={({ isActive }) =>
-                  `rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation inline-flex items-center ${
-                    isActive
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`
-                }
-              >
-                Menu
-              </NavLink>
-              <NavLink
-                to="/owner/settings"
-                className={({ isActive }) =>
-                  `rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation inline-flex items-center ${
-                    isActive
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`
-                }
-              >
-                Settings
-              </NavLink>
-              <NavLink
-                to="/owner/feedback"
-                className={({ isActive }) =>
-                  `rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation inline-flex items-center ${
-                    isActive
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`
-                }
-              >
-                Feedback
-              </NavLink>
-            </nav>
-            {restaurant?.slug && (
-              <a
-                href={`/restaurant/${restaurant.slug}/menu`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="touch-manipulation rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 sm:px-3"
-              >
-                <span className="sm:hidden">View menu</span>
-                <span className="hidden sm:inline">View guest menu</span>
-              </a>
-            )}
-            {restaurant?._id && (
-              <button
-                type="button"
-                className="touch-manipulation rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 sm:px-3"
-                onClick={() => navigate(`/kitchen/${restaurant._id}`)}
-              >
-                <span className="sm:hidden">Kitchen</span>
-                <span className="hidden sm:inline">Open kitchen</span>
-              </button>
-            )}
-            <div className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/80 px-2.5 py-1 sm:flex">
-              <span
-                className="max-w-[120px] truncate text-[11px] text-slate-600 sm:max-w-[180px]"
-                title={owner?.email ?? ''}
-              >
-                {owner?.email}
-              </span>
-              <button
-                type="button"
-                className="touch-manipulation rounded-md bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-slate-700"
-                onClick={() => setShowSignOutConfirm(true)}
-              >
-                Sign out
-              </button>
+            <div className="flex flex-shrink-0 flex-nowrap items-center gap-1 sm:gap-2">
+              <nav className="flex items-center gap-0.5 rounded-md bg-slate-100/80 p-0.5">
+                <NavLink
+                  to="/owner/menu"
+                  className={({ isActive }) =>
+                    `rounded px-1.5 py-1 text-[11px] font-medium transition-colors touch-manipulation sm:px-2 sm:py-1 sm:text-xs ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  Menu
+                </NavLink>
+                <NavLink
+                  to="/owner/stats"
+                  className={({ isActive }) =>
+                    `rounded px-1.5 py-1 text-[11px] font-medium transition-colors touch-manipulation sm:px-2 sm:py-1 sm:text-xs ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  Stats
+                </NavLink>
+                <NavLink
+                  to="/owner/settings"
+                  className={({ isActive }) =>
+                    `rounded px-1.5 py-1 text-[11px] font-medium transition-colors touch-manipulation sm:px-2 sm:py-1 sm:text-xs ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  Settings
+                </NavLink>
+                <NavLink
+                  to="/owner/feedback"
+                  className={({ isActive }) =>
+                    `rounded px-1.5 py-1 text-[11px] font-medium transition-colors touch-manipulation sm:px-2 sm:py-1 sm:text-xs ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`
+                  }
+                >
+                  Feedback
+                </NavLink>
+              </nav>
+              {restaurant?.slug && (
+                <a
+                  href={`/restaurant/${restaurant.slug}/menu`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="touch-manipulation whitespace-nowrap rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 sm:px-2"
+                >
+                  <span className="sm:hidden">Menu</span>
+                  <span className="hidden sm:inline">Guest menu</span>
+                </a>
+              )}
+              {restaurant?._id && (
+                <button
+                  type="button"
+                  className="touch-manipulation whitespace-nowrap rounded border border-slate-200 bg-white px-1.5 py-1 text-[11px] font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 sm:px-2"
+                  onClick={() => navigate(`/kitchen/${restaurant._id}`)}
+                >
+                  <span className="sm:hidden">Kitchen</span>
+                  <span className="hidden sm:inline">Kitchen</span>
+                </button>
+              )}
+              <div className="hidden items-center gap-1 rounded border border-slate-200 bg-slate-50/80 px-1.5 py-0.5 sm:flex">
+                <span
+                  className="max-w-[100px] truncate text-[11px] text-slate-600 sm:max-w-[140px]"
+                  title={owner?.email ?? ''}
+                >
+                  {owner?.email}
+                </span>
+                <button
+                  type="button"
+                  className="touch-manipulation rounded bg-slate-800 px-1.5 py-0.5 text-[11px] font-semibold text-white transition-colors hover:bg-slate-700"
+                  onClick={() => setShowSignOutConfirm(true)}
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
-        </div>
         </header>
       </div>
       {showSignOutConfirm && (

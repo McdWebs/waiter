@@ -23,4 +23,6 @@ const orderSchema = new Schema<OrderDocument>(
   { timestamps: true }
 )
 
+orderSchema.index({ restaurantId: 1, createdAt: -1 })
+
 export const Order = model<OrderDocument>('Order', orderSchema)

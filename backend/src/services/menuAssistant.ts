@@ -72,10 +72,7 @@ export async function menuChat({
     'If the menu has few or no matches (e.g. almost no vegan options), say so plainly and mention the one or two options that do fit, or suggest they ask about modifying a dish. ' +
     'You can recommend items, suggest add-ons, and filter by allergens or preferences. ' +
     'When they ask for "something else" or more options, suggest different dishes than before unless they ask to repeat. ' +
-    'IMPORTANT: When you recommend specific dishes in this reply, append exactly one line at the end in this format: ' +
-    'ADD_TO_CART: [{"name": "<exact dish name from menu>", "quantity": 1}]. ' +
-    'One entry per dish you recommended in this reply only. Valid JSON, double quotes, no comments or code fences. ' +
-    'Only dish names from the menu, quantities 1 or 2. If you are not recommending any specific dishes, do not add ADD_TO_CART.'
+    'IMPORTANT - machine-only line (the user must never see this): When you recommend specific dishes, after your last sentence add a single newline, then exactly: ADD_TO_CART: [{"name": "<exact dish name from menu>", "quantity": 1}] with one object per recommended dish. Valid JSON only, no markdown or backticks. Only dish names from the menu, quantity 1 or 2. If you are not recommending any specific dish to add, do not output ADD_TO_CART at all.'
   const customInstructions = (restaurant.aiInstructions ?? '').trim()
   const contextParts = [menuText]
   if (cartSummary) {
@@ -104,7 +101,6 @@ export async function menuChat({
 
   const raw = response.choices[0]?.message?.content ?? ''
 
-  let reply = raw
   const suggestions: {
     _id: string
     name: string
@@ -115,17 +111,16 @@ export async function menuChat({
     quantity: number
   }[] = []
 
-  const marker = 'ADD_TO_CART:'
-  const markerIndex = raw.lastIndexOf(marker)
-  if (markerIndex !== -1) {
-    reply = raw.slice(0, markerIndex).trim()
-    const afterMarker = raw.slice(markerIndex + marker.length)
-    const start = afterMarker.indexOf('[')
-    const end = afterMarker.lastIndexOf(']')
-    if (start !== -1 && end !== -1 && end > start) {
-      const jsonPart = afterMarker.slice(start, end + 1).trim()
-      try {
-        const parsed = JSON.parse(jsonPart) as { name?: string; quantity?: number }[]
+  // Strip ADD_TO_CART line (and anything after it) so the user never sees it. Case-insensitive.
+  const addToCartRegex = /\s*ADD_TO_CART\s*:[\s\S]*/i
+  const reply = raw.replace(addToCartRegex, '').trim()
+
+  // Parse ADD_TO_CART JSON for suggestion buttons (find marker, then [...] after it)
+  const markerMatch = raw.match(/ADD_TO_CART\s*:\s*(\[[\s\S]*?\])/i)
+  if (markerMatch?.[1]) {
+    try {
+      const parsed = JSON.parse(markerMatch[1]) as { name?: string; quantity?: number }[]
+      if (Array.isArray(parsed)) {
         for (const entry of parsed) {
           if (!entry?.name) continue
           const match = items.find(
@@ -142,9 +137,9 @@ export async function menuChat({
             quantity: entry.quantity && entry.quantity > 0 ? entry.quantity : 1,
           })
         }
-      } catch {
-        // ignore malformed suggestions
       }
+    } catch {
+      // ignore malformed suggestions
     }
   }
 

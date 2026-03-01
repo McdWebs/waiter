@@ -12,6 +12,7 @@ import chatRoutes from './routes/chat'
 import authRoutes from './routes/auth'
 import superAdminRoutes from './routes/superAdmin'
 import feedbackRoutes from './routes/feedback'
+import ownerRoutes from './routes/owner'
 import { authenticateSuperAdmin } from './middleware/auth'
 
 const app = express()
@@ -30,6 +31,7 @@ app.use('/uploads', express.static(uploadsDir))
 app.use('/api', authRoutes)
 app.use('/api/super-admin', authenticateSuperAdmin, superAdminRoutes)
 app.use('/api', feedbackRoutes)
+app.use('/api', ownerRoutes)
 app.use('/api', menuRoutes)
 app.use('/api', orderRoutes)
 app.use('/api', tableRoutes)

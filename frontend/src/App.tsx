@@ -6,6 +6,7 @@ import OwnerLoginPage from './pages/OwnerLoginPage'
 import OwnerSignupPage from './pages/OwnerSignupPage'
 import OwnerSettingsPage from './pages/OwnerSettingsPage'
 import OwnerFeedbackPage from './pages/OwnerFeedbackPage'
+import OwnerStatsPage from './pages/OwnerStatsPage'
 import SuperAdminLoginPage from './pages/SuperAdminLoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import OwnerRoute from './components/OwnerRoute'
@@ -39,6 +40,7 @@ function App() {
               <Route path="/owner" element={<OwnerDashboardLayout />}>
                 <Route index element={<Navigate to="menu" replace />} />
                 <Route path="menu" element={<AdminMenuPage />} />
+                <Route path="stats" element={<OwnerStatsPage />} />
                 <Route path="settings" element={<OwnerSettingsPage />} />
                 <Route path="feedback" element={<OwnerFeedbackPage />} />
               </Route>

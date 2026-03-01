@@ -9,8 +9,20 @@ import { Order } from '../models/Order'
 import { OrderItem } from '../models/OrderItem'
 import { WaiterCall } from '../models/WaiterCall'
 import { OwnerFeedback } from '../models/OwnerFeedback'
+import { ChatEvent } from '../models/ChatEvent'
 
 const router = express.Router()
+
+function getDateRanges() {
+  const now = new Date()
+  const startOfToday = new Date(now)
+  startOfToday.setHours(0, 0, 0, 0)
+  const startOfWeek = new Date(now)
+  startOfWeek.setDate(now.getDate() - now.getDay())
+  startOfWeek.setHours(0, 0, 0, 0)
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  return { now, startOfToday, startOfWeek, startOfMonth }
+}
 
 router.get('/feedback', async (req, res) => {
   try {
@@ -136,23 +148,99 @@ router.get('/restaurants/:id', async (req, res) => {
 
 router.get('/stats', async (req, res) => {
   try {
-    const [totalRestaurants, totalOrders, ordersToday, openWaiterCalls, totalFeedback] =
-      await Promise.all([
-        Restaurant.countDocuments(),
-        Order.countDocuments(),
-        Order.countDocuments({
-          createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-        }),
-        WaiterCall.countDocuments({ status: 'open' }),
-        OwnerFeedback.countDocuments(),
-      ])
+    const { startOfToday, startOfWeek, startOfMonth } = getDateRanges()
+
+    const [
+      totalRestaurants,
+      totalOrders,
+      ordersToday,
+      ordersThisWeek,
+      ordersThisMonth,
+      openWaiterCalls,
+      waiterCallsHandled,
+      waiterCallsHandledThisWeek,
+      totalFeedback,
+      chatSessionsTotal,
+      chatSessionsThisWeek,
+      revenueResult,
+      avgWaiterResult,
+    ] = await Promise.all([
+      Restaurant.countDocuments(),
+      Order.countDocuments(),
+      Order.countDocuments({ createdAt: { $gte: startOfToday } }),
+      Order.countDocuments({ createdAt: { $gte: startOfWeek } }),
+      Order.countDocuments({ createdAt: { $gte: startOfMonth } }),
+      WaiterCall.countDocuments({ status: 'open' }),
+      WaiterCall.countDocuments({ status: 'handled' }),
+      WaiterCall.countDocuments({
+        status: 'handled',
+        handledAt: { $gte: startOfWeek },
+      }),
+      OwnerFeedback.countDocuments(),
+      ChatEvent.countDocuments(),
+      ChatEvent.countDocuments({ createdAt: { $gte: startOfWeek } }),
+      Order.aggregate([
+        {
+          $lookup: {
+            from: 'orderitems',
+            localField: '_id',
+            foreignField: 'orderId',
+            as: 'items',
+          },
+        },
+        { $unwind: '$items' },
+        {
+          $lookup: {
+            from: 'menuitems',
+            localField: 'items.menuItemId',
+            foreignField: '_id',
+            as: 'menuItem',
+          },
+        },
+        { $unwind: '$menuItem' },
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: { $multiply: ['$items.quantity', '$menuItem.price'] },
+            },
+          },
+        },
+      ]),
+      WaiterCall.aggregate([
+        { $match: { status: 'handled', handledAt: { $exists: true, $ne: null } } },
+        {
+          $project: {
+            minutes: {
+              $divide: [
+                { $subtract: ['$handledAt', '$createdAt'] },
+                60 * 1000,
+              ],
+            },
+          },
+        },
+        { $group: { _id: null, avgMinutes: { $avg: '$minutes' } } },
+      ]),
+    ])
+
+    const totalRevenue = revenueResult[0]?.total ?? 0
+    const avgWaiterResponseMinutes =
+      avgWaiterResult[0]?.avgMinutes != null ? Math.round(avgWaiterResult[0].avgMinutes * 10) / 10 : null
 
     return res.json({
       totalRestaurants,
       totalOrders,
       ordersToday,
+      ordersThisWeek,
+      ordersThisMonth,
       openWaiterCalls,
+      waiterCallsHandled,
+      waiterCallsHandledThisWeek,
       totalFeedback,
+      chatSessionsTotal,
+      chatSessionsThisWeek,
+      totalRevenue,
+      avgWaiterResponseMinutes,
     })
   } catch (err) {
     // eslint-disable-next-line no-console

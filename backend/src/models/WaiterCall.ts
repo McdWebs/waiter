@@ -23,5 +23,8 @@ const waiterCallSchema = new Schema<WaiterCallDocument>(
   { timestamps: true }
 )
 
+waiterCallSchema.index({ restaurantId: 1, status: 1 })
+waiterCallSchema.index({ status: 1, handledAt: 1 })
+
 export const WaiterCall = model<WaiterCallDocument>('WaiterCall', waiterCallSchema)
 
