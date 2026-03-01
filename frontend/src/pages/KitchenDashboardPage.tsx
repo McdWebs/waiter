@@ -52,12 +52,30 @@ export default function KitchenDashboardPage() {
   const [bulkCreating, setBulkCreating] = useState(false)
   const [bulkCreateError, setBulkCreateError] = useState<string | null>(null)
   const [historyOrders, setHistoryOrders] = useState<KitchenOrder[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const key = restaurantId ? `kitchenActiveTab:${restaurantId}` : 'kitchenActiveTab'
+    return window.localStorage.getItem(key) === 'history'
+  })
   const [historyError, setHistoryError] = useState<string | null>(null)
+  const [tablesLoading, setTablesLoading] = useState(true)
   const [historyTableNumber, setHistoryTableNumber] = useState<string>('')
   const [historyStatus, setHistoryStatus] = useState<'all' | 'new' | 'preparing' | 'ready'>('all')
   const [historyFrom, setHistoryFrom] = useState<string>('')
   const [historyTo, setHistoryTo] = useState<string>('')
+  const [collapsedTables, setCollapsedTables] = useState<Set<string>>(new Set())
+
+  const toggleTableCollapsed = (tableKey: string) => {
+    setCollapsedTables((prev) => {
+      const next = new Set(prev)
+      if (next.has(tableKey)) {
+        next.delete(tableKey)
+      } else {
+        next.add(tableKey)
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!restaurantId) return
@@ -128,6 +146,7 @@ export default function KitchenDashboardPage() {
   useEffect(() => {
     const loadTables = async () => {
       if (!restaurantId) return
+      setTablesLoading(true)
       try {
         const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/tables`)
         const data = (await res.json()) as RestaurantTable[] & { message?: string }
@@ -138,6 +157,8 @@ export default function KitchenDashboardPage() {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(err)
+      } finally {
+        setTablesLoading(false)
       }
     }
     void loadTables()
@@ -517,7 +538,38 @@ export default function KitchenDashboardPage() {
             History
           </button>
         </div>
-        {activeTab === 'orders' && waiterCalls.length > 0 && (
+        {activeTab === 'orders' && loading && (
+          <div className="mt-3 space-y-3" aria-busy="true" aria-label="Loading orders">
+            <div className="h-14 rounded-2xl bg-slate-200/80 animate-pulse" />
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="h-4 w-16 rounded bg-slate-200 animate-pulse" />
+                    <div className="h-5 w-14 rounded-full bg-slate-200 animate-pulse" />
+                  </div>
+                  <ul className="mb-3 space-y-2">
+                    <li className="h-3 w-full rounded bg-slate-200 animate-pulse" />
+                    <li className="h-3 w-5/6 rounded bg-slate-200 animate-pulse" />
+                    <li className="h-3 w-2/3 rounded bg-slate-200 animate-pulse" />
+                  </ul>
+                  <div className="flex justify-between">
+                    <div className="h-3 w-12 rounded bg-slate-200 animate-pulse" />
+                    <div className="flex gap-1">
+                      <div className="h-6 w-12 rounded-full bg-slate-200 animate-pulse" />
+                      <div className="h-6 w-16 rounded-full bg-slate-200 animate-pulse" />
+                      <div className="h-6 w-12 rounded-full bg-slate-200 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {activeTab === 'orders' && !loading && waiterCalls.length > 0 && (
           <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3">
             <h2 className="mb-2 text-sm font-semibold text-amber-900">Waiter calls</h2>
             <div className="space-y-2">
@@ -553,11 +605,10 @@ export default function KitchenDashboardPage() {
             </div>
           </section>
         )}
-        {activeTab === 'orders' && (
+        {activeTab === 'orders' && !loading && (
           <>
-            {loading && <p className="text-sm text-slate-600">Loading orders…</p>}
             {error && <p className="text-sm text-rose-500">{error}</p>}
-            {!loading && !error && orders.length === 0 && (
+            {!error && orders.length === 0 && (
               <div className="mt-4 flex min-h-[calc(100vh-180px)] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/80 px-6 py-10 text-center">
                 <img
                   src={emptyCartIllustration}
@@ -570,18 +621,54 @@ export default function KitchenDashboardPage() {
                 </p>
               </div>
             )}
-            <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {orders.map((order) => (
-                <KitchenOrderCard
-                  key={order._id}
-                  order={order}
-                  onChangeStatus={(status) => void changeStatus(order._id, status)}
-                />
-              ))}
-            </div>
+            {!error && orders.length > 0 && (
+              <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {orders.map((order) => (
+                  <KitchenOrderCard
+                    key={order._id}
+                    order={order}
+                    onChangeStatus={(status) => void changeStatus(order._id, status)}
+                  />
+                ))}
+              </div>
+            )}
           </>
         )}
-        {activeTab === 'tables' && (
+        {activeTab === 'tables' && (loading || tablesLoading) && (
+          <div className="mt-3 space-y-3" aria-busy="true" aria-label="Loading tables">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-24 rounded bg-slate-200 animate-pulse" />
+              <div className="flex gap-2">
+                <div className="h-8 w-20 rounded-full bg-slate-200 animate-pulse" />
+                <div className="h-8 w-24 rounded-full bg-slate-200 animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 rounded bg-slate-200 animate-pulse" />
+                    <div className="flex-1">
+                      <div className="mb-1 h-4 w-28 rounded bg-slate-200 animate-pulse" />
+                      <div className="h-3 w-32 rounded bg-slate-100 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                    <div className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="h-24 rounded-xl bg-slate-100 animate-pulse" />
+                      <div className="h-24 rounded-xl bg-slate-100 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {activeTab === 'tables' && !loading && !tablesLoading && (
           <div className="mt-3 space-y-3">
             <div className="flex items-center justify-between text-xs">
               <p className="text-slate-600">Manage tables</p>
@@ -724,34 +811,51 @@ export default function KitchenDashboardPage() {
             {tables.map((table) => {
               const activeOrders = table.orders.filter((o) => o.status !== 'ready')
               const readyOrders = table.orders.filter((o) => o.status === 'ready')
+              const isCollapsed = collapsedTables.has(table.key)
               return (
                 <div
                   key={table.key}
-                  className="rounded-2xl border border-slate-200 bg-white p-3 text-sm shadow-sm"
+                  className="rounded-2xl border border-slate-200 bg-white text-sm shadow-sm overflow-hidden"
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-sm font-semibold text-slate-900">
-                        {table.label}
-                      </h2>
-                      <p className="text-[11px] text-slate-500">
-                        {table.orders.length} orders · {table.waiterCalls.length} waiter calls
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between gap-2 p-3">
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      onClick={() => toggleTableCollapsed(table.key)}
+                      aria-expanded={!isCollapsed}
+                    >
+                      <span
+                        className={`shrink-0 text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                        aria-hidden
+                      >
+                        ▶
+                      </span>
+                      <div className="min-w-0">
+                        <h2 className="text-sm font-semibold text-slate-900">
+                          {table.label}
+                        </h2>
+                        <p className="text-[11px] text-slate-500">
+                          {table.orders.length} orders · {table.waiterCalls.length} waiter calls
+                        </p>
+                      </div>
+                    </button>
                     {table.orders.length > 0 && (
                       <button
                         type="button"
-                        className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
-                        onClick={() =>
+                        className="shrink-0 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                        onClick={(e) => {
+                          e.stopPropagation()
                           void clearTableOrders(
                             table.key === 'no-table' ? undefined : table.orders[0]?.tableNumber
                           )
-                        }
+                        }}
                       >
                         Clear table
                       </button>
                     )}
                   </div>
+                  {!isCollapsed && (
+                    <div className="border-t border-slate-100 px-3 pb-3 pt-2">
                   {table.waiterCalls.length > 0 && (
                     <div className="mb-2 rounded-xl bg-amber-50 px-2 py-2">
                       <p className="mb-1 text-[11px] font-semibold text-amber-900">
@@ -822,12 +926,49 @@ export default function KitchenDashboardPage() {
                       )}
                     </div>
                   )}
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
         )}
-        {activeTab === 'history' && (
+        {activeTab === 'history' && historyLoading && (
+          <div className="mt-3 space-y-3 text-xs" aria-busy="true" aria-label="Loading history">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="mb-2 h-4 w-28 rounded bg-slate-200 animate-pulse" />
+              <div className="mb-3 grid gap-2 sm:grid-cols-4">
+                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
+                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
+                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
+                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="h-3 w-20 rounded bg-slate-200 animate-pulse" />
+                <div className="h-8 w-24 rounded-full bg-slate-200 animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="h-3 w-16 rounded bg-slate-200 animate-pulse" />
+                    <div className="h-5 w-14 rounded-full bg-slate-200 animate-pulse" />
+                  </div>
+                  <div className="mb-2 h-3 w-24 rounded bg-slate-100 animate-pulse" />
+                  <ul className="space-y-1">
+                    <li className="h-3 w-full rounded bg-slate-100 animate-pulse" />
+                    <li className="h-3 w-3/4 rounded bg-slate-100 animate-pulse" />
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {activeTab === 'history' && !historyLoading && (
           <div className="mt-3 space-y-3 text-xs">
             <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
               <h2 className="mb-2 text-sm font-semibold text-slate-900">Order history</h2>

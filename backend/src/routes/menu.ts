@@ -131,7 +131,7 @@ router.get('/restaurants/:restaurantId/admin-menu', authenticateOwner, async (re
 router.patch('/restaurants/:restaurantId', authenticateOwner, async (req, res) => {
   try {
     const restaurantIdParam = String(req.params.restaurantId)
-    const { name, currency } = req.body as { name?: string; currency?: string }
+    const body = req.body as Record<string, unknown>
 
     if (!Types.ObjectId.isValid(restaurantIdParam)) {
       return res.status(400).json({ message: 'Invalid restaurantId' })
@@ -143,8 +143,32 @@ router.patch('/restaurants/:restaurantId', authenticateOwner, async (req, res) =
     }
 
     const update: Record<string, unknown> = {}
-    if (typeof name === 'string' && name.trim()) update.name = name.trim()
-    if (typeof currency === 'string' && currency.trim()) update.currency = currency.trim().toUpperCase()
+    if (typeof body.name === 'string' && body.name.trim()) update.name = body.name.trim()
+    if (typeof body.currency === 'string' && body.currency.trim())
+      update.currency = (body.currency as string).trim().toUpperCase()
+    if (typeof body.address === 'string') update.address = body.address.trim() || undefined
+    if (typeof body.phone === 'string') update.phone = body.phone.trim() || undefined
+    if (typeof body.contactEmail === 'string') update.contactEmail = body.contactEmail.trim() || undefined
+    if (typeof body.description === 'string') update.description = body.description.trim() || undefined
+    if (typeof body.restaurantType === 'string') update.restaurantType = body.restaurantType.trim() || undefined
+    if (typeof body.timezone === 'string') update.timezone = body.timezone.trim() || undefined
+    if (typeof body.openingHoursNote === 'string')
+      update.openingHoursNote = body.openingHoursNote.trim() || undefined
+    if (typeof body.taxRatePercent === 'number' && body.taxRatePercent >= 0)
+      update.taxRatePercent = body.taxRatePercent
+    if (typeof body.serviceChargePercent === 'number' && body.serviceChargePercent >= 0)
+      update.serviceChargePercent = body.serviceChargePercent
+    if (typeof body.allowOrders === 'boolean') update.allowOrders = body.allowOrders
+    if (typeof body.orderLeadTimeMinutes === 'number' && body.orderLeadTimeMinutes >= 0)
+      update.orderLeadTimeMinutes = body.orderLeadTimeMinutes
+    if (typeof body.aiInstructions === 'string') {
+      const trimmed = body.aiInstructions.trim()
+      if (trimmed) {
+        update.aiInstructions = trimmed
+      } else {
+        ;(update as any).$unset = { ...((update as any).$unset || {}), aiInstructions: 1 }
+      }
+    }
 
     const restaurant = await Restaurant.findByIdAndUpdate(restaurantIdParam, update, {
       new: true,

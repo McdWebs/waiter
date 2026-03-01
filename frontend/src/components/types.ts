@@ -26,6 +26,18 @@ export interface Restaurant {
   name: string
   slug: string
   currency?: string
+  address?: string
+  phone?: string
+  contactEmail?: string
+  description?: string
+  restaurantType?: string
+  timezone?: string
+  openingHoursNote?: string
+  taxRatePercent?: number
+  serviceChargePercent?: number
+  allowOrders?: boolean
+  orderLeadTimeMinutes?: number
+  aiInstructions?: string
 }
 
 export interface CartItem {

@@ -5,11 +5,22 @@ import { useState } from 'react'
 interface Props {
   item: MenuItem
   currencySymbol: string
+  onDetailOpen?: () => void
+  onDetailClose?: () => void
 }
 
-export default function MenuItemCard({ item, currencySymbol }: Props) {
+export default function MenuItemCard({ item, currencySymbol, onDetailOpen, onDetailClose }: Props) {
   const { addItem, items, updateItem } = useCart()
   const [showDetails, setShowDetails] = useState(false)
+
+  const openDetails = () => {
+    setShowDetails(true)
+    onDetailOpen?.()
+  }
+  const closeDetails = () => {
+    setShowDetails(false)
+    onDetailClose?.()
+  }
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState('')
 
@@ -24,11 +35,11 @@ export default function MenuItemCard({ item, currencySymbol }: Props) {
         className={`w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition cursor-pointer ${
           isAvailable ? 'hover:border-emerald-200 hover:shadow-md' : 'opacity-60'
         }`}
-        onClick={() => setShowDetails(true)}
+        onClick={openDetails}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            setShowDetails(true)
+            openDetails()
           }
         }}
       >
@@ -134,7 +145,7 @@ export default function MenuItemCard({ item, currencySymbol }: Props) {
                 <button
                   type="button"
                   className="text-sm text-slate-500 hover:text-slate-800"
-                  onClick={() => setShowDetails(false)}
+                  onClick={closeDetails}
                 >
                   Close
                 </button>
@@ -195,7 +206,7 @@ export default function MenuItemCard({ item, currencySymbol }: Props) {
                     addItem(item, quantity, notes || undefined)
                     setQuantity(1)
                     setNotes('')
-                    setShowDetails(false)
+                    closeDetails()
                   }}
                 >
                   Add to cart

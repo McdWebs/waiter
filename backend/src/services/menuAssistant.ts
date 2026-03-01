@@ -65,39 +65,41 @@ export async function menuChat({
   const { menuText, items, restaurant } = await getMenuContext(restaurantId)
 
   const restaurantName = restaurant.name
-
-  const systemPrompt =
-    `You are the friendly AI waiter for the restaurant "${restaurantName}". ` +
-    'Your answers must feel personal to this specific restaurant: speak in the first person plural ("we"), ' +
-    'refer to dishes and categories as if you are part of the staff, and occasionally mention the restaurant name naturally. ' +
-    'You can answer questions ONLY using the provided menu data. ' +
-    'If a question is not related to the menu, politely decline. ' +
+  const basePrompt =
+    `You are the waiter for "${restaurantName}". Talk like a real person: warm and helpful, not formal or robotic. ` +
+    'Use the menu data ONLY. Be concise—one or two short sentences per idea. ' +
+    'Lead with what they asked for: name the dish(es), price, and category. Skip filler like "delightful", "perfect", "sure to satisfy". ' +
+    'If the menu has few or no matches (e.g. almost no vegan options), say so plainly and mention the one or two options that do fit, or suggest they ask about modifying a dish. ' +
     'You can recommend items, suggest add-ons, and filter by allergens or preferences. ' +
-    'When the guest asks for "something else" or more options, try to suggest different dishes than in earlier replies, unless they explicitly ask to repeat something. ' +
-    'IMPORTANT: Every time you recommend one or more specific dishes that the guest might like in THIS reply, ' +
-    'you MUST append ONE extra line at the very end of your reply in this exact format: ' +
-    'ADD_TO_CART: [{"name": "<exact dish name from menu data>", "quantity": 1}]. ' +
-    'The JSON array must contain ONE entry for EACH specific dish name you just recommended in this reply, and MUST NOT contain dishes you did not explicitly name in this reply. ' +
-    'Use a valid JSON array, with double quotes, no comments, and no extra text or code fences. ' +
-    'Only include dish names that exist in the menu data and keep quantities small (1 or 2). ' +
-    'If in a given reply you are not recommending any specific dishes, do NOT include an ADD_TO_CART line at all.'
-
+    'When they ask for "something else" or more options, suggest different dishes than before unless they ask to repeat. ' +
+    'IMPORTANT: When you recommend specific dishes in this reply, append exactly one line at the end in this format: ' +
+    'ADD_TO_CART: [{"name": "<exact dish name from menu>", "quantity": 1}]. ' +
+    'One entry per dish you recommended in this reply only. Valid JSON, double quotes, no comments or code fences. ' +
+    'Only dish names from the menu, quantities 1 or 2. If you are not recommending any specific dishes, do not add ADD_TO_CART.'
+  const customInstructions = (restaurant.aiInstructions ?? '').trim()
   const contextParts = [menuText]
   if (cartSummary) {
     contextParts.push(`\nCurrent cart: ${cartSummary}`)
   }
 
+  const systemMessages: { role: 'system'; content: string }[] = [
+    { role: 'system', content: basePrompt },
+  ]
+  if (customInstructions) {
+    systemMessages.push({
+      role: 'system',
+      content: `CRITICAL - Restaurant owner instructions (override default style when they conflict):\n${customInstructions}`,
+    })
+  }
+  systemMessages.push({
+    role: 'system',
+    content: `Menu data:\n${contextParts.join('\n')}`,
+  })
+
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      {
-        role: 'system',
-        content: `Menu data:\n${contextParts.join('\n')}`,
-      },
-      ...messages,
-    ],
-    temperature: 0.2,
+    messages: [...systemMessages, ...messages],
+    temperature: 0.4,
   })
 
   const raw = response.choices[0]?.message?.content ?? ''

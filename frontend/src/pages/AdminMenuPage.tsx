@@ -63,6 +63,7 @@ export default function AdminMenuPage() {
     _id: string
     name: string
   } | null>(null)
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false)
 
   const loadAdminMenu = async (opts?: { showFullscreenLoader?: boolean }) => {
     if (!restaurantId) return
@@ -435,7 +436,7 @@ export default function AdminMenuPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900">
-        <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mx-auto max-w-3xl px-3 py-6 sm:px-4">
           <p className="text-sm text-slate-600">Loading menu…</p>
         </div>
       </div>
@@ -445,7 +446,7 @@ export default function AdminMenuPage() {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900">
-        <div className="mx-auto max-w-3xl px-4 py-6">
+        <div className="mx-auto max-w-3xl px-3 py-6 sm:px-4">
           <h1 className="text-lg font-semibold">Admin</h1>
           <p className="mt-2 text-sm text-rose-600">
             {error ?? 'Failed to load restaurant menu.'}
@@ -458,95 +459,93 @@ export default function AdminMenuPage() {
   const currencySymbol = getCurrencySymbol(data.restaurant.currency)
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              {data.restaurant.name}
-            </h1>
-            <p className="text-xs text-slate-500">Menu admin · manage categories and items</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
-              <span className="text-slate-600">Currency</span>
-              <select
-                className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-900 outline-none"
-                value={data.restaurant.currency ?? 'USD'}
-                disabled={saving}
-                onChange={(e) => {
-                  const next = e.target.value
-                  if (!restaurantId || !next) return
-                  void (async () => {
-                    setSaving(true)
-                    try {
-                      const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                        },
-                        body: JSON.stringify({ currency: next }),
-                      })
-                      if (!res.ok) {
-                        const json = (await res.json()) as { message?: string }
-                        throw new Error(json.message ?? 'Failed to update currency')
-                      }
-                      setData((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              restaurant: { ...prev.restaurant, currency: next },
-                            }
-                          : prev
-                      )
-                    } catch (err) {
-                      // eslint-disable-next-line no-alert
-                      alert((err as Error).message)
-                    } finally {
-                      setSaving(false)
-                    }
-                  })()
-                }}
-              >
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="ILS">ILS (₪)</option>
-              </select>
-            </label>
-            {saving && (
-              <span className="text-[11px] text-slate-500">Saving…</span>
-            )}
-          </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-8">
+      <div className="mx-auto max-w-3xl px-3 py-4 space-y-6 sm:px-4 sm:py-6">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            {data.restaurant.name}
+          </h1>
+          <p className="text-xs text-slate-500">Menu admin · manage categories and items</p>
         </header>
 
-        <section className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-          <h2 className="mb-2 text-sm font-semibold text-slate-900">Add category</h2>
-          <form
-            className="flex flex-col gap-2 text-xs sm:flex-row"
-            onSubmit={(e) => {
-              e.preventDefault()
-              const form = e.currentTarget
-              const formData = new FormData(form)
-              const name = (formData.get('name') as string) ?? ''
-              void addCategory(name)
-              form.reset()
-            }}
-          >
-            <input
-              name="name"
-              className="flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
-              placeholder="New category name"
-            />
-            <button
-              type="submit"
-              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-              disabled={saving}
+        <section className="rounded-2xl border border-slate-200 bg-white px-3 py-3 sm:px-4">
+          {/* Mobile: single button that expands to show form */}
+          <div className="sm:hidden">
+            {!addCategoryOpen ? (
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                disabled={saving}
+                onClick={() => setAddCategoryOpen(true)}
+              >
+                + Add category
+              </button>
+            ) : (
+              <form
+                className="flex flex-col gap-2 text-xs"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const form = e.currentTarget
+                  const formData = new FormData(form)
+                  const name = (formData.get('name') as string) ?? ''
+                  void addCategory(name)
+                  form.reset()
+                  setAddCategoryOpen(false)
+                }}
+              >
+                <input
+                  name="name"
+                  autoFocus
+                  className="min-h-[44px] w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none placeholder:text-slate-400"
+                  placeholder="New category name"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="min-h-[44px] flex-1 touch-manipulation rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-700 hover:bg-slate-50"
+                    onClick={() => setAddCategoryOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="min-h-[44px] flex-1 touch-manipulation rounded-full bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                    disabled={saving}
+                  >
+                    Add
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+          {/* Desktop: always-visible form */}
+          <div className="hidden sm:block">
+            <h2 className="mb-2 text-sm font-semibold text-slate-900">Add category</h2>
+            <form
+              className="flex flex-col gap-2 text-xs sm:flex-row"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const form = e.currentTarget
+                const formData = new FormData(form)
+                const name = (formData.get('name') as string) ?? ''
+                void addCategory(name)
+                form.reset()
+              }}
             >
-              Add category
-            </button>
-          </form>
+              <input
+                name="name"
+                className="min-h-[44px] flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                placeholder="New category name"
+              />
+              <button
+                type="submit"
+                className="min-h-[44px] touch-manipulation rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                disabled={saving}
+              >
+                Add category
+              </button>
+            </form>
+          </div>
         </section>
 
         <section className="space-y-6">
@@ -556,7 +555,7 @@ export default function AdminMenuPage() {
           {data.categories.map((category, catIndex) => (
             <div
               key={category._id}
-              className={`rounded-2xl border bg-white p-4 shadow-sm ${
+              className={`rounded-2xl border bg-white p-3 shadow-sm sm:p-4 ${
                 dragCategoryIndex === catIndex
                   ? 'border-emerald-400 ring-1 ring-emerald-300'
                   : 'border-slate-200'
@@ -591,13 +590,13 @@ export default function AdminMenuPage() {
               }}
               onDragEnd={() => setDragCategoryIndex(null)}
             >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {editingCategoryId === category._id ? (
                     <>
                       <input
                         type="text"
-                        className="max-w-xs rounded-full border border-slate-300 bg-white px-3 py-1 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                        className="min-h-[40px] max-w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 sm:max-w-xs sm:py-1"
                         value={editingCategoryName}
                         onChange={(e) => setEditingCategoryName(e.target.value)}
                         autoFocus
@@ -605,7 +604,7 @@ export default function AdminMenuPage() {
                       />
                       <button
                         type="button"
-                        className="rounded-full bg-emerald-600 px-3 py-1 text-[10px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                        className="min-h-[36px] touch-manipulation rounded-full bg-emerald-600 px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                         disabled={saving}
                         onClick={() => void updateCategoryName(category._id, editingCategoryName)}
                       >
@@ -613,7 +612,7 @@ export default function AdminMenuPage() {
                       </button>
                       <button
                         type="button"
-                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] text-slate-700 hover:bg-slate-50"
+                        className="min-h-[36px] touch-manipulation rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] text-slate-700 hover:bg-slate-50"
                         disabled={saving}
                         onClick={() => {
                           setEditingCategoryId(null)
@@ -631,7 +630,7 @@ export default function AdminMenuPage() {
                       </span>
                       <button
                         type="button"
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                        className="min-h-[36px] touch-manipulation rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] text-slate-700 hover:bg-slate-100 disabled:opacity-40"
                         disabled={saving}
                         onClick={() => {
                           setEditingCategoryId(category._id)
@@ -643,10 +642,10 @@ export default function AdminMenuPage() {
                     </>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <button
                     type="button"
-                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700 disabled:opacity-40"
+                    className="min-h-[36px] min-w-[36px] touch-manipulation rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700 disabled:opacity-40"
                     disabled={catIndex === 0 || saving}
                     onClick={() => {
                       if (saving || !data || catIndex === 0) return
@@ -661,7 +660,7 @@ export default function AdminMenuPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700 disabled:opacity-40"
+                    className="min-h-[36px] min-w-[36px] touch-manipulation rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700 disabled:opacity-40"
                     disabled={catIndex === data.categories.length - 1 || saving}
                     onClick={() => {
                       if (saving || !data || catIndex === data.categories.length - 1) return
@@ -676,7 +675,7 @@ export default function AdminMenuPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                    className="min-h-[36px] touch-manipulation rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
                     disabled={saving}
                     onClick={() =>
                       setAddingItemForCategory({
@@ -689,7 +688,7 @@ export default function AdminMenuPage() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-medium text-rose-700 hover:bg-rose-100"
+                    className="min-h-[36px] touch-manipulation rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-medium text-rose-700 hover:bg-rose-100"
                     disabled={saving}
                     onClick={() =>
                       setPendingDelete({
@@ -709,7 +708,7 @@ export default function AdminMenuPage() {
                   category.items.map((item, itemIndex) => (
                     <div
                       key={item._id}
-                      className={`flex flex-col gap-3 rounded-xl border bg-white/80 px-3 py-3 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between ${
+                      className={`flex flex-col gap-3 rounded-xl border bg-white/80 px-3 py-3 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:justify-between touch-manipulation ${
                         dragItemState &&
                         dragItemState.categoryId === category._id &&
                         dragItemState.index === itemIndex
@@ -816,7 +815,7 @@ export default function AdminMenuPage() {
                           </div>
                           <button
                             type="button"
-                            className={`rounded-full px-2 py-1 text-[10px] font-medium ${
+                            className={`min-h-[36px] touch-manipulation rounded-full px-3 py-1.5 text-[10px] font-medium ${
                               item.available === false
                                 ? 'border border-rose-300 bg-rose-50 text-rose-800 hover:bg-rose-100'
                                 : 'border border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100'
@@ -872,7 +871,7 @@ export default function AdminMenuPage() {
                         <div className="flex gap-1">
                           <button
                             type="button"
-                            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                            className="min-h-[36px] touch-manipulation rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                             disabled={saving}
                             onClick={() =>
                               setEditingItem({
@@ -885,7 +884,7 @@ export default function AdminMenuPage() {
                           </button>
                           <button
                             type="button"
-                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-medium text-rose-700 hover:bg-rose-100"
+                            className="min-h-[36px] touch-manipulation rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-medium text-rose-700 hover:bg-rose-100"
                             disabled={saving}
                             onClick={() =>
                               setPendingDelete({
@@ -910,8 +909,8 @@ export default function AdminMenuPage() {
         </section>
 
         {pendingDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 overflow-y-auto">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl my-auto">
               <h2 className="text-sm font-semibold text-slate-900">Confirm delete</h2>
               <p className="mt-2 text-xs text-slate-700">
                 {pendingDelete.type === 'category'
@@ -921,7 +920,7 @@ export default function AdminMenuPage() {
               <div className="mt-4 flex justify-end gap-2 text-xs">
                 <button
                   type="button"
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700 hover:bg-slate-50"
+                  className="min-h-[44px] touch-manipulation rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50"
                   disabled={saving}
                   onClick={() => setPendingDelete(null)}
                 >
@@ -929,7 +928,7 @@ export default function AdminMenuPage() {
                 </button>
                 <button
                   type="button"
-                  className="rounded-full bg-rose-600 px-3 py-1 text-white hover:bg-rose-700 disabled:opacity-60"
+                  className="min-h-[44px] touch-manipulation rounded-full bg-rose-600 px-4 py-2 text-white hover:bg-rose-700 disabled:opacity-60"
                   disabled={saving}
                   onClick={() => {
                     if (!pendingDelete) return
@@ -948,8 +947,8 @@ export default function AdminMenuPage() {
           </div>
         )}
         {addingItemForCategory && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-y-auto overscroll-contain sm:items-center">
+            <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl my-4 sm:my-0 max-h-[90vh] overflow-y-auto">
               <h2 className="text-sm font-semibold text-slate-900">Add item</h2>
               <p className="mt-1 text-[11px] text-slate-600">
                 Create a new menu item in{' '}
@@ -974,7 +973,7 @@ export default function AdminMenuPage() {
                   <input
                     name="name"
                     required
-                    className="flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                    className="min-h-[44px] flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
                     placeholder="Item name"
                   />
                   <input
@@ -982,7 +981,7 @@ export default function AdminMenuPage() {
                     type="number"
                     min={0.01}
                     step="0.01"
-                    className="w-24 rounded-full border border-slate-300 bg-white px-3 py-2 text-right text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                    className="min-h-[44px] w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-right text-xs text-slate-900 outline-none placeholder:text-slate-400 sm:w-24"
                     placeholder="Price"
                   />
                 </div>
@@ -990,7 +989,7 @@ export default function AdminMenuPage() {
                   name="description"
                   rows={2}
                   required
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                  className="min-h-[80px] w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
                   placeholder="Short description"
                 />
                 <div className="space-y-2">
@@ -1074,7 +1073,7 @@ export default function AdminMenuPage() {
                 <div className="mt-3 flex justify-end gap-2">
                   <button
                     type="button"
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    className="min-h-[44px] touch-manipulation rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
                     disabled={saving}
                     onClick={() => setAddingItemForCategory(null)}
                   >
@@ -1082,7 +1081,7 @@ export default function AdminMenuPage() {
                   </button>
                   <button
                     type="submit"
-                    className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                    className="min-h-[44px] touch-manipulation rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                     disabled={saving}
                   >
                     Add item
@@ -1093,8 +1092,8 @@ export default function AdminMenuPage() {
           </div>
         )}
         {editingItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-y-auto overscroll-contain sm:items-center">
+            <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl my-4 sm:my-0 max-h-[90vh] overflow-y-auto">
               <h2 className="text-sm font-semibold text-slate-900">Edit item</h2>
               <p className="mt-1 text-[11px] text-slate-600">
                 Update the details for <span className="font-semibold">{editingItem.item.name}</span>.
@@ -1127,7 +1126,7 @@ export default function AdminMenuPage() {
                     name="name"
                     required
                     defaultValue={editingItem.item.name}
-                    className="flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                    className="min-h-[44px] flex-1 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
                     placeholder="Item name"
                   />
                   <input
@@ -1136,7 +1135,7 @@ export default function AdminMenuPage() {
                     min={0.01}
                     step="0.01"
                     defaultValue={editingItem.item.price.toFixed(2)}
-                    className="w-24 rounded-full border border-slate-300 bg-white px-3 py-2 text-right text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                    className="min-h-[44px] w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-right text-xs text-slate-900 outline-none placeholder:text-slate-400 sm:w-24"
                     placeholder="Price"
                   />
                 </div>
@@ -1145,7 +1144,7 @@ export default function AdminMenuPage() {
                   rows={2}
                   required
                   defaultValue={editingItem.item.description}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
+                  className="min-h-[80px] w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
                   placeholder="Short description"
                 />
                 <div className="space-y-2">
@@ -1257,7 +1256,7 @@ export default function AdminMenuPage() {
                 <div className="mt-3 flex justify-end gap-2">
                   <button
                     type="button"
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    className="min-h-[44px] touch-manipulation rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
                     disabled={saving}
                     onClick={() => setEditingItem(null)}
                   >
@@ -1265,7 +1264,7 @@ export default function AdminMenuPage() {
                   </button>
                   <button
                     type="submit"
-                    className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                    className="min-h-[44px] touch-manipulation rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                     disabled={saving}
                   >
                     Save changes

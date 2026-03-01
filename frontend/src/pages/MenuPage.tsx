@@ -45,6 +45,7 @@ function MenuPageInner() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [billOpen, setBillOpen] = useState(false)
+  const [itemDetailOpen, setItemDetailOpen] = useState(false)
   const tableFromUrl = searchParams.get('table') ?? undefined
   const tableKey = tableFromUrl ?? 'default'
   const latestOrderIdRef = useRef<string | null>(null)
@@ -160,30 +161,30 @@ function MenuPageInner() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 text-slate-900">
-      <div className="mx-auto max-w-md px-4 pb-4 pt-8">
-        <header className="mb-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+      <div className="mx-auto max-w-md px-4 pb-4 pt-6">
+        <header className="mb-3 rounded-xl border border-slate-200/80 bg-white px-3 py-2.5 shadow-sm shadow-slate-200/40">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
               {data.restaurant.name}
             </h1>
             {tableFromUrl && (
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-700">
+              <span className="shrink-0 rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white">
                 Table {tableFromUrl}
               </span>
             )}
           </div>
           {latestOrderStatus === 'new' && (
-            <p className="mt-1 text-xs font-medium text-amber-700">
+            <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-800">
               Your order was sent to the kitchen.
             </p>
           )}
           {latestOrderStatus === 'preparing' && (
-            <p className="mt-1 text-xs font-medium text-sky-700">
+            <p className="mt-2 rounded-md bg-sky-50 px-2.5 py-1.5 text-[11px] font-medium text-sky-800">
               Your order is being prepared.
             </p>
           )}
           {latestOrderStatus === 'ready' && (
-            <p className="mt-1 text-xs font-medium text-emerald-700">
+            <p className="mt-2 rounded-md bg-emerald-50 px-2.5 py-1.5 text-[11px] font-medium text-emerald-800">
               Your order is ready.
             </p>
           )}
@@ -213,13 +214,20 @@ function MenuPageInner() {
               </h2>
               <div className="space-y-2">
                 {cat.items.map((item) => (
-                  <MenuItemCard key={item._id} item={item} currencySymbol={currencySymbol} />
+                  <MenuItemCard
+                  key={item._id}
+                  item={item}
+                  currencySymbol={currencySymbol}
+                  onDetailOpen={() => setItemDetailOpen(true)}
+                  onDetailClose={() => setItemDetailOpen(false)}
+                />
                 ))}
               </div>
             </section>
           ))}
         </main>
       </div>
+      {!itemDetailOpen && (
       <div className="fixed bottom-4 left-0 right-0 z-30 flex justify-center px-4">
         <div className="flex w-full max-w-md items-center gap-2 rounded-full bg-slate-900 text-slate-50 shadow-lg shadow-slate-900/40 px-3 py-2">
           <button
@@ -250,6 +258,7 @@ function MenuPageInner() {
           </div>
         </div>
       </div>
+      )}
       <CartDrawer
         open={cartOpen}
         onClose={() => setCartOpen(false)}
