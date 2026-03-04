@@ -806,7 +806,39 @@ export default function KitchenDashboardPage() {
               </div>
             )}
             {tables.length === 0 && (
-              <p className="text-sm text-slate-600">No tables yet.</p>
+              <div className="mt-4 flex min-h-[calc(100vh-180px)] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/80 px-6 py-8 text-center">
+                <img
+                  src={emptyCartIllustration}
+                  alt="No tables yet illustration"
+                  className="mb-4 h-24 w-auto opacity-95"
+                />
+                <h2 className="text-sm font-semibold text-slate-900">No tables yet</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Create tables so you can organize and track incoming orders.
+                </p>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    className="rounded-full bg-slate-900 px-4 py-1.5 text-[11px] font-medium text-white hover:bg-slate-800"
+                    onClick={() => {
+                      setCreateTableError(null)
+                      setCreateTableOpen(true)
+                    }}
+                  >
+                    + New table
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-300 bg-white px-4 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                    onClick={() => {
+                      setBulkCreateError(null)
+                      setBulkCreateOpen(true)
+                    }}
+                  >
+                    Bulk create
+                  </button>
+                </div>
+              </div>
             )}
             {tables.map((table) => {
               const activeOrders = table.orders.filter((o) => o.status !== 'ready')
