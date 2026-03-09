@@ -35,6 +35,7 @@ export default function AdminMenuPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [dragCategoryIndex, setDragCategoryIndex] = useState<number | null>(null)
   const [dragItemState, setDragItemState] = useState<{
     categoryId: string
@@ -182,34 +183,15 @@ export default function AdminMenuPage() {
     formData.set('allergens', allergens.join(','))
     formData.set('tags', tags.join(','))
 
-    const availableFromRaw = (formData.get('availableFrom') as string) ?? ''
-    const availableUntilRaw = (formData.get('availableUntil') as string) ?? ''
-
-    const availableFrom = availableFromRaw.trim()
-    const availableUntil = availableUntilRaw.trim()
-
-    if ((availableFrom && !availableUntil) || (!availableFrom && availableUntil)) {
-      // eslint-disable-next-line no-alert
-      alert('If you set a time window, please fill both "from" and "until" times.')
-      return false
-    }
-
-    if (availableFrom && availableUntil && availableFrom >= availableUntil) {
-      // eslint-disable-next-line no-alert
-      alert('"Available until" must be later than "available from".')
-      return false
-    }
-
-    if (availableFrom && availableUntil) {
-      formData.set('availableFrom', availableFrom)
-      formData.set('availableUntil', availableUntil)
-    } else {
-      formData.delete('availableFrom')
-      formData.delete('availableUntil')
-    }
+    const imageEntry = formData.get('image')
+    const hasImage =
+      imageEntry instanceof File && typeof imageEntry.size === 'number' && imageEntry.size > 0
 
     try {
       setSaving(true)
+      if (hasImage) {
+        setUploadingImage(true)
+      }
       const res = await fetch(`${API_BASE}/api/categories/${categoryId}/items`, {
         method: 'POST',
         headers: {
@@ -229,6 +211,9 @@ export default function AdminMenuPage() {
       return false
     } finally {
       setSaving(false)
+      if (hasImage) {
+        setUploadingImage(false)
+      }
     }
   }
 
@@ -277,30 +262,6 @@ export default function AdminMenuPage() {
     formData.set('allergens', allergens.join(','))
     formData.set('tags', tags.join(','))
 
-    const availableFromRaw = (formData.get('availableFrom') as string | null) ?? ''
-    const availableUntilRaw = (formData.get('availableUntil') as string | null) ?? ''
-
-    const availableFrom = availableFromRaw.trim()
-    const availableUntil = availableUntilRaw.trim()
-
-    if (availableFrom || availableUntil) {
-      if (!availableFrom || !availableUntil) {
-        // eslint-disable-next-line no-alert
-        alert('If you set a time window, please fill both "from" and "until" times.')
-        return
-      }
-      if (availableFrom >= availableUntil) {
-        // eslint-disable-next-line no-alert
-        alert('"Available until" must be later than "available from".')
-        return
-      }
-      formData.set('availableFrom', availableFrom)
-      formData.set('availableUntil', availableUntil)
-    } else {
-      formData.delete('availableFrom')
-      formData.delete('availableUntil')
-    }
-
     const removeImageRaw = formData.get('removeImage') as string | null
     if (removeImageRaw === 'on' || removeImageRaw === 'true' || removeImageRaw === '1') {
       formData.set('removeImage', 'true')
@@ -315,8 +276,15 @@ export default function AdminMenuPage() {
       formData.set('available', 'false')
     }
 
+    const imageEntry = formData.get('image')
+    const hasImage =
+      imageEntry instanceof File && typeof imageEntry.size === 'number' && imageEntry.size > 0
+
     setSaving(true)
     try {
+      if (hasImage) {
+        setUploadingImage(true)
+      }
       const res = await fetch(`${API_BASE}/api/items/${itemId}`, {
         method: 'PATCH',
         headers: {
@@ -334,6 +302,9 @@ export default function AdminMenuPage() {
       alert((err as Error).message)
     } finally {
       setSaving(false)
+      if (hasImage) {
+        setUploadingImage(false)
+      }
     }
   }
 
@@ -511,11 +482,19 @@ export default function AdminMenuPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-8">
       <div className="mx-auto max-w-3xl px-3 py-4 space-y-6 sm:px-4 sm:py-6">
-        <header>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            {data.restaurant.name}
-          </h1>
-          <p className="text-xs text-slate-500">Menu admin · manage categories and items</p>
+        <header className="space-y-2">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+              {data.restaurant.name}
+            </h1>
+            <p className="text-xs text-slate-500">Menu admin · manage categories and items</p>
+          </div>
+          {uploadingImage && (
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] text-emerald-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Uploading image…</span>
+            </div>
+          )}
         </header>
 
         <section className="rounded-2xl border border-slate-200 bg-white px-3 py-3 sm:px-4">
@@ -829,7 +808,7 @@ export default function AdminMenuPage() {
                               ⋮⋮
                             </div>
                             {item.imageUrl && (
-                              <div className="hidden h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 sm:block">
+                              <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                                 <img
                                   src={item.imageUrl}
                                   alt={item.name}
@@ -1136,32 +1115,6 @@ export default function AdminMenuPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-[11px] font-medium text-slate-700">
-                      Time-based availability (optional)
-                    </span>
-                    <p className="text-[10px] text-slate-500">
-                      Leave empty to make this item available all day. Times are in your restaurant timezone.
-                    </p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <div className="flex-1 space-y-1">
-                        <span className="text-[10px] text-slate-600">From</span>
-                        <input
-                          name="availableFrom"
-                          type="time"
-                          className="min-h-[40px] w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
-                        />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <span className="text-[10px] text-slate-600">Until</span>
-                        <input
-                          name="availableUntil"
-                          type="time"
-                          className="min-h-[40px] w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-medium text-slate-700">
                       Item photo (optional)
                     </span>
                     <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-[11px] text-slate-600 hover:border-emerald-400 hover:bg-emerald-50/40">
@@ -1175,6 +1128,11 @@ export default function AdminMenuPage() {
                         <span className="text-[10px] text-slate-500">
                           Square image works best · max 5MB
                         </span>
+                        {uploadingImage && (
+                          <span className="mt-0.5 text-[10px] text-emerald-700">
+                            Uploading image…
+                          </span>
+                        )}
                       </div>
                       <input
                         type="file"
@@ -1189,7 +1147,7 @@ export default function AdminMenuPage() {
                   <button
                     type="button"
                     className="min-h-[44px] touch-manipulation rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                    disabled={saving}
+                    disabled={saving || uploadingImage}
                     onClick={() => setAddingItemForCategory(null)}
                   >
                     Cancel
@@ -1197,9 +1155,9 @@ export default function AdminMenuPage() {
                   <button
                     type="submit"
                     className="min-h-[44px] touch-manipulation rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                    disabled={saving}
+                    disabled={saving || uploadingImage}
                   >
-                    Add item
+                    {uploadingImage ? 'Uploading image…' : 'Add item'}
                   </button>
                 </div>
               </form>
@@ -1325,34 +1283,6 @@ export default function AdminMenuPage() {
                   </div>
                   <div className="flex flex-col gap-1">
                     <span className="text-[11px] font-medium text-slate-700">
-                      Time-based availability (optional)
-                    </span>
-                    <p className="text-[10px] text-slate-500">
-                      Leave empty to make this item available all day. Times are in your restaurant timezone.
-                    </p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <div className="flex-1 space-y-1">
-                        <span className="text-[10px] text-slate-600">From</span>
-                        <input
-                          name="availableFrom"
-                          type="time"
-                          defaultValue={editingItem.item.availableFrom}
-                          className="min-h-[40px] w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
-                        />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <span className="text-[10px] text-slate-600">Until</span>
-                        <input
-                          name="availableUntil"
-                          type="time"
-                          defaultValue={editingItem.item.availableUntil}
-                          className="min-h-[40px] w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[11px] font-medium text-slate-700">
                       Item photo
                     </span>
                     <label className="group flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-[11px] text-slate-600 hover:border-emerald-400 hover:bg-emerald-50/40">
@@ -1366,6 +1296,11 @@ export default function AdminMenuPage() {
                         <span className="text-[10px] text-slate-500">
                           Square image works best · max 5MB
                         </span>
+                        {uploadingImage && (
+                          <span className="mt-0.5 text-[10px] text-emerald-700">
+                            Uploading image…
+                          </span>
+                        )}
                       </div>
                       <input
                         type="file"
@@ -1400,7 +1335,7 @@ export default function AdminMenuPage() {
                   <button
                     type="button"
                     className="min-h-[44px] touch-manipulation rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                    disabled={saving}
+                    disabled={saving || uploadingImage}
                     onClick={() => setEditingItem(null)}
                   >
                     Cancel
@@ -1408,9 +1343,9 @@ export default function AdminMenuPage() {
                   <button
                     type="submit"
                     className="min-h-[44px] touch-manipulation rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                    disabled={saving}
+                    disabled={saving || uploadingImage}
                   >
-                    Save changes
+                    {uploadingImage ? 'Uploading image…' : 'Save changes'}
                   </button>
                 </div>
               </form>

@@ -8,12 +8,6 @@ export interface MenuItem {
   position?: number
   imageUrl?: string
   available?: boolean
-  /**
-   * Optional daily time window in restaurant local time (HH:mm, 24h).
-   * If both are set, the item is only visible/orderable between these times.
-   */
-  availableFrom?: string
-  availableUntil?: string
 }
 
 export interface SuggestedItem extends MenuItem {

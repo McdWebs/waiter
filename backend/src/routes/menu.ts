@@ -8,44 +8,12 @@ import multer from 'multer'
 import { uploadMenuItemImage } from '../services/s3Client'
 
 const router = express.Router()
-const upload = multer({ storage: multer.memoryStorage() })
-
-function getCurrentTimeHHmm(timezone?: string): string {
-  try {
-    const now = new Date()
-    return new Intl.DateTimeFormat('en-GB', {
-      timeZone: timezone || 'UTC',
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(now)
-  } catch {
-    const now = new Date()
-    return now.toISOString().substring(11, 16)
-  }
-}
-
-function isItemWithinBusinessHours(
-  item: { available?: boolean; availableFrom?: string; availableUntil?: string },
-  currentHHmm: string
-): boolean {
-  if (item.available === false) {
-    return false
-  }
-
-  const from = item.availableFrom
-  const until = item.availableUntil
-
-  if (!from || !until) {
-    return true
-  }
-
-  if (from >= until) {
-    return true
-  }
-
-  return currentHHmm >= from && currentHHmm <= until
-}
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+})
 
 router.get('/restaurants/:slug/menu', async (req, res) => {
   try {
@@ -67,8 +35,7 @@ router.get('/restaurants/:slug/menu', async (req, res) => {
       .sort({ position: 1, name: 1 })
       .lean()
 
-    const currentHHmm = getCurrentTimeHHmm(restaurant.timezone)
-    const itemsForGuests = items.filter((item) => isItemWithinBusinessHours(item, currentHHmm))
+    const itemsForGuests = items.filter((item) => item.available !== false)
 
     const categoriesWithItems = categories.map((category) => ({
       ...category,
@@ -374,18 +341,6 @@ router.post(
           ? ((req.body as any).tags as string).split(',').map((t) => t.trim()).filter(Boolean)
           : ((req.body as any).tags as string[] | undefined)
 
-      const availableFromRaw = (req.body as any).availableFrom as string | undefined
-      const availableUntilRaw = (req.body as any).availableUntil as string | undefined
-
-      const availableFrom =
-        typeof availableFromRaw === 'string' && availableFromRaw.trim()
-          ? availableFromRaw.trim()
-          : undefined
-      const availableUntil =
-        typeof availableUntilRaw === 'string' && availableUntilRaw.trim()
-          ? availableUntilRaw.trim()
-          : undefined
-
       if (!Types.ObjectId.isValid(categoryIdParam)) {
         return res.status(400).json({ message: 'Invalid categoryId' })
       }
@@ -399,18 +354,6 @@ router.post(
       }
       if (typeof price !== 'number' || Number.isNaN(price) || price <= 0) {
         return res.status(400).json({ message: 'Price must be a positive number' })
-      }
-
-      if ((availableFrom && !availableUntil) || (!availableFrom && availableUntil)) {
-        return res.status(400).json({
-          message: 'Both "availableFrom" and "availableUntil" are required when limiting times',
-        })
-      }
-
-      if (availableFrom && availableUntil && availableFrom >= availableUntil) {
-        return res
-          .status(400)
-          .json({ message: '"availableUntil" must be later than "availableFrom"' })
       }
 
       const category = await MenuCategory.findOne({
@@ -453,11 +396,6 @@ router.post(
         tags: rawTags ?? [],
         position: nextPosition,
         available: true,
-      }
-
-      if (availableFrom && availableUntil) {
-        ;(newItemData as any).availableFrom = availableFrom
-        ;(newItemData as any).availableUntil = availableUntil
       }
 
       if (imageUrl !== undefined) {
@@ -509,18 +447,6 @@ router.patch('/items/:itemId', authenticateOwner, upload.single('image'), async 
         ? (body.tags as string).split(',').map((t) => t.trim()).filter(Boolean)
         : (body.tags as string[] | undefined)
 
-    const availableFromRaw = body.availableFrom as string | undefined
-    const availableUntilRaw = body.availableUntil as string | undefined
-
-    const availableFrom =
-      typeof availableFromRaw === 'string' && availableFromRaw.trim()
-        ? availableFromRaw.trim()
-        : undefined
-    const availableUntil =
-      typeof availableUntilRaw === 'string' && availableUntilRaw.trim()
-        ? availableUntilRaw.trim()
-        : undefined
-
     const removeImageRaw = body.removeImage as string | undefined
     const availableRaw = body.available as string | boolean | undefined
 
@@ -553,23 +479,6 @@ router.patch('/items/:itemId', authenticateOwner, upload.single('image'), async 
     }).lean()
     if (!category) {
       return res.status(403).json({ message: 'Forbidden' })
-    }
-
-    if (availableFrom || availableUntil) {
-      if (!availableFrom || !availableUntil) {
-        return res.status(400).json({
-          message: 'Both "availableFrom" and "availableUntil" are required when limiting times',
-        })
-      }
-
-      if (availableFrom >= availableUntil) {
-        return res
-          .status(400)
-          .json({ message: '"availableUntil" must be later than "availableFrom"' })
-      }
-
-      update.availableFrom = availableFrom
-      update.availableUntil = availableUntil
     }
 
     if (removeImageRaw && ['true', '1', 'on'].includes(removeImageRaw.toLowerCase())) {

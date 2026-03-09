@@ -9,21 +9,6 @@ import { io } from '../server'
 
 const router = express.Router()
 
-function getCurrentTimeHHmm(timezone?: string): string {
-  try {
-    const now = new Date()
-    return new Intl.DateTimeFormat('en-GB', {
-      timeZone: timezone || 'UTC',
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(now)
-  } catch {
-    const now = new Date()
-    return now.toISOString().substring(11, 16)
-  }
-}
-
 router.post('/orders', async (req, res) => {
   try {
     const { restaurantId, tableNumber, items, notes } = req.body as {
@@ -58,36 +43,22 @@ router.post('/orders', async (req, res) => {
     }
 
     const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } })
-      .select({ _id: 1, available: 1, name: 1, availableFrom: 1, availableUntil: 1 })
+      .select({ _id: 1, available: 1, name: 1 })
       .lean()
 
-    const unavailableNames = new Set<string>()
-    const unavailableByTime = new Set<string>()
+    const unavailableNames: string[] = []
     const availableMap = new Map<string, boolean | undefined>()
     for (const mi of menuItems) {
       availableMap.set(mi._id.toString(), mi.available)
       if (mi.available === false) {
-        unavailableNames.add(mi.name)
+        unavailableNames.push(mi.name)
       }
     }
 
-    const currentHHmm = getCurrentTimeHHmm((restaurant as any).timezone as string | undefined)
-    for (const mi of menuItems) {
-      const from = (mi as any).availableFrom as string | undefined
-      const until = (mi as any).availableUntil as string | undefined
-
-      if (!from || !until) continue
-      if (from >= until) continue
-
-      if (currentHHmm < from || currentHHmm > until) {
-        unavailableByTime.add(mi.name)
-      }
-    }
-
-    if (unavailableNames.size > 0 || unavailableByTime.size > 0) {
+    if (unavailableNames.length > 0) {
       return res.status(400).json({
         message: 'Some items are currently unavailable',
-        unavailableItems: Array.from(new Set([...unavailableNames, ...unavailableByTime])),
+        unavailableItems: unavailableNames,
       })
     }
 

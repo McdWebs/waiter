@@ -207,18 +207,17 @@ export default function OwnerSettingsPage() {
               Tidy up how your restaurant looks to guests and how orders flow.
             </p>
           </div>
-          <div className="hidden items-center gap-3 text-xs text-slate-600 sm:flex">
-            <div className="rounded-full bg-slate-50 px-3 py-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:gap-3">
+            <div className="hidden rounded-full bg-slate-50 px-3 py-1 sm:block">
               <span className="font-medium text-slate-800">
                 {restaurant.name ?? 'Restaurant'}
               </span>
             </div>
-            <div className="rounded-full bg-slate-50 px-3 py-1">
-              Currency:{' '}
+            <div className="rounded-full bg-slate-50 px-2.5 py-1 sm:px-3">
               <span className="font-medium text-slate-800">{form.currency}</span>
             </div>
             <div
-              className={`flex items-center gap-1 rounded-full px-3 py-1 ${
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 sm:px-3 ${
                 form.allowOrders
                   ? 'bg-emerald-50 text-emerald-800'
                   : 'bg-slate-100 text-slate-700'
@@ -255,15 +254,58 @@ export default function OwnerSettingsPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)] items-start">
+        {/* Sidebar: shown first on mobile so public link is accessible */}
+        <aside className="space-y-4 lg:order-2">
+          <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm sm:block">
+            <h2 className="text-sm font-semibold text-slate-900">Account</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              You are signed in as:
+            </p>
+            <p className="mt-2 truncate rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              {owner?.email ?? '—'}
+            </p>
+            <button
+              type="button"
+              className="mt-3 w-full rounded-full bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
+              onClick={() => {
+                logout()
+                navigate('/owner/login', { replace: true })
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm">
+            <h2 className="text-sm font-semibold text-slate-900">Public menu link</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Share this link with your guests so they can view the menu and order from their
+              table.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <code className="min-w-0 flex-1 truncate rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800">
+                {publicUrl}
+              </code>
+              <button
+                type="button"
+                className="w-full shrink-0 rounded-full bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white hover:bg-slate-800 sm:w-auto"
+                onClick={handleCopyLink}
+              >
+                Copy link
+              </button>
+            </div>
+          </div>
+        </aside>
+
         {/* Main settings form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 lg:order-1">
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:py-4">
             <h2 className="text-sm font-semibold text-slate-900">Restaurant details</h2>
             <p className="mt-1 text-xs text-slate-500">
               Basic information shown to guests.
             </p>
             <div className="mt-3 space-y-3 text-sm">
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                 <div className="space-y-1">
                   <label htmlFor="name" className={labelClass}>
                     Restaurant name
@@ -424,13 +466,13 @@ export default function OwnerSettingsPage() {
               </div>
               <div className="space-y-1">
                 <label className={labelClass}>Quick pick</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {OPENING_HOURS_PRESETS.map((preset) => (
                     <button
                       key={preset.value}
                       type="button"
                       onClick={() => handleChange('openingHoursNote', preset.value)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`rounded-full border px-2.5 py-1.5 text-[11px] sm:px-3 sm:text-xs font-medium transition-colors ${
                         form.openingHoursNote === preset.value
                           ? 'border-slate-800 bg-slate-800 text-white'
                           : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
@@ -659,7 +701,7 @@ export default function OwnerSettingsPage() {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               disabled={saving || isPristine}
             >
               {saving ? 'Saving…' : 'Save all settings'}
@@ -667,48 +709,7 @@ export default function OwnerSettingsPage() {
           </div>
         </form>
 
-        {/* Sidebar: account (desktop) + public link */}
-        <aside className="space-y-4">
-          <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm sm:block">
-            <h2 className="text-sm font-semibold text-slate-900">Account</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              You are signed in as:
-            </p>
-            <p className="mt-2 truncate rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-              {owner?.email ?? '—'}
-            </p>
-            <button
-              type="button"
-              className="mt-3 w-full rounded-full bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
-              onClick={() => {
-                logout()
-                navigate('/owner/login', { replace: true })
-              }}
-            >
-              Sign out
-            </button>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm">
-            <h2 className="text-sm font-semibold text-slate-900">Public menu link</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Share this link with your guests so they can view the menu and order from their
-              table.
-            </p>
-            <div className="mt-3 flex items-center gap-2 text-xs">
-              <code className="flex-1 truncate rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-slate-800">
-                {publicUrl}
-              </code>
-              <button
-                type="button"
-                className="rounded-full bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white hover:bg-slate-800"
-                onClick={handleCopyLink}
-              >
-                Copy link
-              </button>
-            </div>
-          </div>
-        </aside>
+        {/* Sidebar is rendered above the form (lg:order-2 puts it right on desktop) */}
       </div>
     </div>
   )
