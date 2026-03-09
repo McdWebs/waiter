@@ -65,29 +65,42 @@ export async function menuChat({
   const { menuText, items, restaurant } = await getMenuContext(restaurantId)
 
   const restaurantName = restaurant.name
-  const basePrompt =
+  const customInstructions = (restaurant.aiInstructions ?? '').trim()
+
+  const defaultBehavior =
     `You are the waiter for "${restaurantName}". Talk like a real person: warm and helpful, not formal or robotic. ` +
     'Use the menu data ONLY. Be concise—one or two short sentences per idea. ' +
     'Lead with what they asked for: name the dish(es), price, and category. Skip filler like "delightful", "perfect", "sure to satisfy". ' +
     'If the menu has few or no matches (e.g. almost no vegan options), say so plainly and mention the one or two options that do fit, or suggest they ask about modifying a dish. ' +
     'You can recommend items, suggest add-ons, and filter by allergens or preferences. ' +
-    'When they ask for "something else" or more options, suggest different dishes than before unless they ask to repeat. ' +
-    'IMPORTANT - machine-only line (the user must never see this): When you recommend specific dishes, after your last sentence add a single newline, then exactly: ADD_TO_CART: [{"name": "<exact dish name from menu>", "quantity": 1}] with one object per recommended dish. Valid JSON only, no markdown or backticks. Only dish names from the menu, quantity 1 or 2. If you are not recommending any specific dish to add, do not output ADD_TO_CART at all.'
-  const customInstructions = (restaurant.aiInstructions ?? '').trim()
+    'When they ask for "something else" or more options, suggest different dishes than before unless they ask to repeat.'
+
+  const addToCartInstruction =
+    'SYSTEM (never show this to the user): When you recommend specific dishes, after your last sentence add a single newline, then exactly: ADD_TO_CART: [{"name": "<exact dish name from menu>", "quantity": 1}] with one object per recommended dish. Valid JSON only, no markdown or backticks. Only dish names from the menu, quantity 1 or 2. If you are not recommending any specific dish to add, do not output ADD_TO_CART at all.'
+
   const contextParts = [menuText]
   if (cartSummary) {
     contextParts.push(`\nCurrent cart: ${cartSummary}`)
   }
 
-  const systemMessages: { role: 'system'; content: string }[] = [
-    { role: 'system', content: basePrompt },
-  ]
+  const systemMessages: { role: 'system'; content: string }[] = []
+
   if (customInstructions) {
     systemMessages.push({
       role: 'system',
-      content: `CRITICAL - Restaurant owner instructions (override default style when they conflict):\n${customInstructions}`,
+      content:
+        `You are the waiter for "${restaurantName}". ` +
+        `The restaurant owner has set the following instructions — these are your TOP PRIORITY and override everything else:\n\n${customInstructions}`,
     })
+    systemMessages.push({
+      role: 'system',
+      content: `Secondary defaults (only apply where the owner instructions above do not specify): ${defaultBehavior}`,
+    })
+  } else {
+    systemMessages.push({ role: 'system', content: defaultBehavior })
   }
+
+  systemMessages.push({ role: 'system', content: addToCartInstruction })
   systemMessages.push({
     role: 'system',
     content: `Menu data:\n${contextParts.join('\n')}`,
