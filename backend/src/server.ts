@@ -17,10 +17,13 @@ import { authenticateSuperAdmin } from './middleware/auth'
 
 const app = express()
 
+const corsOriginEnv = process.env.CORS_ORIGIN
+const allowedOrigins = corsOriginEnv ? corsOriginEnv.split(',').map((o) => o.trim()) : '*'
+
 app.use(express.json())
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN ?? '*',
+    origin: allowedOrigins,
   })
 )
 
@@ -41,7 +44,7 @@ const server = http.createServer(app)
 
 export const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN ?? '*',
+    origin: allowedOrigins,
   },
 })
 

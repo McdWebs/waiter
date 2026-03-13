@@ -8,3 +8,11 @@
 body {
   font-family: var(--font-sans);
 }
+
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
