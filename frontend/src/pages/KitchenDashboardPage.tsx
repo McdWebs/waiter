@@ -587,8 +587,9 @@ export default function KitchenDashboardPage() {
         <header className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Kitchen
-              {restaurant && restaurantId === restaurant._id ? ` · ${restaurant.name}` : ''}
+              {restaurant && restaurantId === restaurant._id && restaurant.name
+                ? `${restaurant.name} · Kitchen`
+                : 'Kitchen'}
             </h1>
             <p className="text-xs text-slate-500">
               Incoming orders and waiter calls in real time.

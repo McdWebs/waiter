@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../components/AuthContext'
 import { apiFetch } from '../lib/api'
 import type { Restaurant } from '../components/types'
+import MapLocationPicker from '../components/MapLocationPicker'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
 
@@ -81,6 +82,7 @@ export default function OwnerSettingsPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
+  const [mapPickerOpen, setMapPickerOpen] = useState(false)
 
   useEffect(() => {
     if (!success) return
@@ -130,6 +132,8 @@ export default function OwnerSettingsPage() {
   const handleChange = (field: keyof typeof form, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
+
+  const openMapPicker = () => setMapPickerOpen(true)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -448,13 +452,29 @@ export default function OwnerSettingsPage() {
                   <label htmlFor="address" className={labelClass}>
                     Address
                   </label>
-                  <input
-                    id="address"
-                    name="address"
-                    value={form.address}
-                    onChange={(e) => handleChange('address', e.target.value)}
-                    className={inputClass}
-                    placeholder="Street, city, postal code"
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      id="address"
+                      name="address"
+                      value={form.address}
+                      onChange={(e) => handleChange('address', e.target.value)}
+                      className={inputClass}
+                      placeholder="Street, city, postal code"
+                    />
+                    <button
+                      type="button"
+                      onClick={openMapPicker}
+                      className="shrink-0 self-center rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                      title="Pick on map"
+                      aria-label="Pick location on map"
+                    >
+                      🗺️ Map
+                    </button>
+                  </div>
+                  <MapLocationPicker
+                    open={mapPickerOpen}
+                    onClose={() => setMapPickerOpen(false)}
+                    onSelect={(address) => handleChange('address', address)}
                   />
                 </div>
                 <div className="space-y-1">
