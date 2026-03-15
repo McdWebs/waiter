@@ -43,12 +43,6 @@ const OPENING_HOURS_PRESETS = [
   { label: 'Breakfast & lunch (07–15)', value: 'Mon–Sun 07:00–15:00' },
 ] as const
 
-const BUSINESS_PLAN_TIME_PRESETS = [
-  { label: 'Sun–Thu 12:00–16:00', value: 'Sun–Thu 12:00–16:00' },
-  { label: 'Weekdays 12:00–15:00', value: 'Mon–Fri 12:00–15:00' },
-  { label: 'Lunch only 12:00–16:00', value: 'Lunch only 12:00–16:00' },
-] as const
-
 const TIMEZONES = [
   'UTC',
   'America/New_York',
