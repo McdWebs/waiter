@@ -9,6 +9,15 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Horizontal scroll without visible scrollbar (still swipeable / scrollable). */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 768px) {
   input,
   textarea,

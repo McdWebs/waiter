@@ -47,7 +47,7 @@ function InstagramIcon() {
 
 function FacebookIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="block h-5 w-5 shrink-0 -translate-y-0.5">
       <path
         d="M13.5 21v-7.2h2.4l.36-2.8h-2.76V9.2c0-.81.23-1.36 1.4-1.36H16.5V5.3a21.1 21.1 0 0 0-2.28-.12c-2.25 0-3.78 1.37-3.78 3.9V11H8v2.8h2.44V21h3.06Z"
         fill="currentColor"
@@ -492,7 +492,7 @@ function MenuPageInner() {
           )}
           {hasMultipleCategories && (
             <div className="mt-2">
-              <nav className="flex gap-1.5 overflow-x-auto pb-1 pt-0.5">
+              <nav className="scrollbar-hide flex gap-1.5 overflow-x-auto pb-1 pt-0.5">
                 <button
                   type="button"
                   onClick={() => setSelectedCategoryId('all')}

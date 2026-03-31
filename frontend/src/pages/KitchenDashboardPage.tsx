@@ -32,6 +32,25 @@ interface RestaurantTable {
   status: 'active' | 'inactive'
 }
 
+const HISTORY_STATUS_BADGE: Record<KitchenOrder['status'], string> = {
+  new: 'bg-slate-700 text-white',
+  preparing: 'bg-amber-500 text-white',
+  ready: 'bg-emerald-600 text-white',
+}
+
+const HISTORY_CARD_SURFACE: Record<KitchenOrder['status'], string> = {
+  new: 'border-slate-200 bg-gradient-to-br from-slate-50 to-white',
+  preparing: 'border-amber-200 bg-gradient-to-br from-amber-50/80 to-white',
+  ready: 'border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white',
+}
+
+const HISTORY_STATUS_FILTERS: { value: 'all' | KitchenOrder['status']; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'new', label: 'New' },
+  { value: 'preparing', label: 'Preparing' },
+  { value: 'ready', label: 'Ready' },
+]
+
 export default function KitchenDashboardPage() {
   const { restaurantId } = useParams<{ restaurantId: string }>()
   const { restaurant, token, updateRestaurant } = useAuth()
@@ -72,6 +91,7 @@ export default function KitchenDashboardPage() {
   const [historyStatus, setHistoryStatus] = useState<'all' | 'new' | 'preparing' | 'ready'>('all')
   const [historyFrom, setHistoryFrom] = useState<string>('')
   const [historyTo, setHistoryTo] = useState<string>('')
+  const [historyFiltersCollapsed, setHistoryFiltersCollapsed] = useState(true)
   const [collapsedTables, setCollapsedTables] = useState<Set<string>>(new Set())
   const [selectedTableKeys, setSelectedTableKeys] = useState<Set<string>>(new Set())
   const [waiterNamesByTable, setWaiterNamesByTable] = useState<Record<string, string>>({})
@@ -656,23 +676,32 @@ export default function KitchenDashboardPage() {
     }
   }
 
-  const loadHistory = async () => {
+  const loadHistory = async (queryOverrides?: {
+    tableNumber?: string
+    status?: typeof historyStatus
+    from?: string
+    to?: string
+  }) => {
     if (!restaurantId) return
     setHistoryLoading(true)
     setHistoryError(null)
     try {
+      const table = queryOverrides?.tableNumber ?? historyTableNumber
+      const status = queryOverrides?.status ?? historyStatus
+      const from = queryOverrides?.from ?? historyFrom
+      const to = queryOverrides?.to ?? historyTo
       const params = new URLSearchParams()
-      if (historyTableNumber) {
-        params.set('tableNumber', historyTableNumber)
+      if (table) {
+        params.set('tableNumber', table)
       }
-      if (historyStatus !== 'all') {
-        params.set('status', historyStatus)
+      if (status !== 'all') {
+        params.set('status', status)
       }
-      if (historyFrom) {
-        params.set('from', historyFrom)
+      if (from) {
+        params.set('from', from)
       }
-      if (historyTo) {
-        params.set('to', historyTo)
+      if (to) {
+        params.set('to', to)
       }
       params.set('includeClosed', 'true')
       const url =
@@ -693,11 +722,46 @@ export default function KitchenDashboardPage() {
     }
   }
 
+  const clearHistoryFilters = () => {
+    setHistoryTableNumber('')
+    setHistoryStatus('all')
+    setHistoryFrom('')
+    setHistoryTo('')
+    void loadHistory({
+      tableNumber: '',
+      status: 'all',
+      from: '',
+      to: '',
+    })
+  }
+
+  const handleHistoryTableChange = (value: string) => {
+    setHistoryTableNumber(value)
+    void loadHistory({ tableNumber: value })
+  }
+
+  const handleHistoryStatusChange = (value: typeof historyStatus) => {
+    setHistoryStatus(value)
+    void loadHistory({ status: value })
+  }
+
+  const applyHistoryDateRange = () => {
+    void loadHistory()
+  }
+
   useEffect(() => {
     if (activeTab !== 'history') return
     void loadHistory()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
+
+  const sortedHistoryOrders = useMemo(
+    () =>
+      [...historyOrders].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    [historyOrders],
+  )
 
   const isAcceptingOrders = restaurant?.allowOrders !== false
 
@@ -1281,34 +1345,33 @@ export default function KitchenDashboardPage() {
           </div>
         )}
         {activeTab === 'history' && historyLoading && (
-          <div className="mt-3 space-y-3 text-xs" aria-busy="true" aria-label="Loading history">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-              <div className="mb-2 h-4 w-28 rounded bg-slate-200 animate-pulse" />
-              <div className="mb-3 grid gap-2 sm:grid-cols-4">
-                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
-                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
-                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
-                <div className="h-8 rounded-xl bg-slate-200 animate-pulse" />
+          <div className="mt-3 space-y-4 text-xs" aria-busy="true" aria-label="Loading history">
+            <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+              <div className="mb-4 h-4 w-36 rounded-md bg-slate-200 animate-pulse" />
+              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                <div className="h-24 rounded-xl bg-slate-100 animate-pulse" />
+                <div className="h-24 rounded-xl bg-slate-100 animate-pulse" />
               </div>
-              <div className="flex items-center justify-between">
-                <div className="h-3 w-20 rounded bg-slate-200 animate-pulse" />
-                <div className="h-8 w-24 rounded-full bg-slate-200 animate-pulse" />
+              <div className="mb-4 h-10 rounded-xl bg-slate-100 animate-pulse" />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="h-6 w-24 rounded-full bg-slate-200 animate-pulse" />
+                <div className="h-9 w-28 rounded-full bg-slate-200 animate-pulse" />
               </div>
             </div>
             <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
-                  <div className="mb-2 flex items-center justify-between">
-                    <div className="h-3 w-16 rounded bg-slate-200 animate-pulse" />
-                    <div className="h-5 w-14 rounded-full bg-slate-200 animate-pulse" />
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="h-3 w-28 rounded bg-slate-200 animate-pulse" />
+                    <div className="h-5 w-16 rounded-full bg-slate-200 animate-pulse" />
                   </div>
-                  <div className="mb-2 h-3 w-24 rounded bg-slate-100 animate-pulse" />
-                  <ul className="space-y-1">
+                  <div className="mb-2 h-3 w-40 rounded bg-slate-100 animate-pulse" />
+                  <ul className="space-y-2">
                     <li className="h-3 w-full rounded bg-slate-100 animate-pulse" />
-                    <li className="h-3 w-3/4 rounded bg-slate-100 animate-pulse" />
+                    <li className="h-3 w-[80%] rounded bg-slate-100 animate-pulse" />
                   </ul>
                 </div>
               ))}
@@ -1316,132 +1379,228 @@ export default function KitchenDashboardPage() {
           </div>
         )}
         {activeTab === 'history' && !historyLoading && (
-          <div className="mt-3 space-y-3 text-xs">
-            <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-              <h2 className="mb-2 text-sm font-semibold text-slate-900">Order history</h2>
-              <div className="mb-3 grid gap-2 sm:grid-cols-4">
-                <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">Table</span>
-                  <select
-                    className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
-                    value={historyTableNumber}
-                    onChange={(e) => setHistoryTableNumber(e.target.value)}
-                  >
-                    <option value="">All tables</option>
-                    {restaurantTables.map((table) => (
-                      <option key={table._id} value={table.number}>
-                        {table.name}
-                      </option>
-                    ))}
-                    <option value="__no-table__" disabled>
-                      {/* placeholder for future no-table filter */}
-                    </option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">Status</span>
-                  <select
-                    className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
-                    value={historyStatus}
-                    onChange={(e) =>
-                      setHistoryStatus(e.target.value as 'all' | 'new' | 'preparing' | 'ready')
-                    }
-                  >
-                    <option value="all">All</option>
-                    <option value="new">New</option>
-                    <option value="preparing">Preparing</option>
-                    <option value="ready">Ready</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">From</span>
-                  <input
-                    type="date"
-                    className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
-                    value={historyFrom}
-                    onChange={(e) => setHistoryFrom(e.target.value)}
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">To</span>
-                  <input
-                    type="date"
-                    className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
-                    value={historyTo}
-                    onChange={(e) => setHistoryTo(e.target.value)}
-                  />
-                </label>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] text-slate-500">
-                  {historyLoading
-                    ? 'Loading...'
-                    : historyOrders.length > 0
-                      ? `${historyOrders.length} orders`
-                      : 'No orders for selected filters.'}
+          <div className="mt-3 space-y-4 text-xs">
+            <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold tracking-tight text-slate-900">
+                    Order history
+                  </h2>
+                  <p className="mt-0.5 text-[12px] leading-snug text-slate-500">
+                    Past orders and outcomes. Table/status apply instantly; dates need confirmation.
+                  </p>
                 </div>
                 <button
                   type="button"
-                  className="rounded-full bg-slate-900 px-4 py-1 text-[11px] font-medium text-white hover:bg-slate-800 disabled:opacity-60"
-                  disabled={historyLoading}
-                  onClick={() => void loadHistory()}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                  aria-expanded={!historyFiltersCollapsed}
+                  aria-controls="history-filters-panel"
+                  onClick={() => setHistoryFiltersCollapsed((prev) => !prev)}
                 >
-                  Apply filters
+                  {historyFiltersCollapsed ? 'Show filters' : 'Hide filters'}
+                  <span
+                    aria-hidden
+                    className={`text-[10px] transition-transform ${historyFiltersCollapsed ? '' : 'rotate-180'}`}
+                  >
+                    ▼
+                  </span>
                 </button>
               </div>
-              {historyError && (
-                <p className="mt-2 text-[11px] text-rose-500">{historyError}</p>
+
+              {!historyFiltersCollapsed && (
+                <div id="history-filters-panel" className="space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Table
+                      </span>
+                      <select
+                        className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                        value={historyTableNumber}
+                        onChange={(e) => handleHistoryTableChange(e.target.value)}
+                      >
+                        <option value="">All tables</option>
+                        {restaurantTables.map((table) => (
+                          <option key={table._id} value={table.number}>
+                            {table.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Status
+                      </span>
+                      <div
+                        className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50/80 p-1 shadow-inner"
+                        role="group"
+                        aria-label="Filter by status"
+                      >
+                        {HISTORY_STATUS_FILTERS.map(({ value, label }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => handleHistoryStatusChange(value)}
+                            className={`min-h-9 flex-1 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition sm:flex-none sm:px-3 ${
+                              historyStatus === value
+                                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
+                                : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        From date
+                      </span>
+                      <input
+                        type="date"
+                        className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                        value={historyFrom}
+                        onChange={(e) => setHistoryFrom(e.target.value)}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        To date
+                      </span>
+                      <input
+                        type="date"
+                        className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                        value={historyTo}
+                        onChange={(e) => setHistoryTo(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                </div>
               )}
-            </div>
-            <div className="space-y-2">
-              {historyOrders.map((order) => (
-                <div
-                  key={order._id}
-                  className="rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-sm"
+
+              <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-800">
+                    {historyOrders.length}{' '}
+                    {historyOrders.length === 1 ? 'order' : 'orders'}
+                  </span>
+                  {historyOrders.length === 0 && !historyError && (
+                    <span className="text-[11px] text-slate-500">
+                      No matches — try clearing filters or widening the date range.
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                    disabled={historyLoading}
+                    onClick={() => clearHistoryFilters()}
+                  >
+                    Clear filters
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full bg-slate-900 px-4 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
+                    disabled={historyLoading}
+                    onClick={() => applyHistoryDateRange()}
+                  >
+                    Apply dates
+                  </button>
+                </div>
+              </div>
+              {historyError && (
+                <p
+                  className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] text-rose-700"
+                  role="alert"
                 >
-                  <div className="mb-1 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-mono text-slate-500">
+                  {historyError}
+                </p>
+              )}
+            </section>
+
+            <div className="space-y-2.5">
+              {sortedHistoryOrders.map((order) => (
+                <article
+                  key={order._id}
+                  className={`rounded-2xl border p-4 text-xs shadow-sm ${HISTORY_CARD_SURFACE[order.status]}`}
+                >
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="font-mono text-[11px] font-medium text-slate-500">
                         #{order._id.slice(-5)}
                       </span>
                       {order.tableNumber && (
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
+                        <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-medium text-slate-700 ring-1 ring-slate-200/80">
                           Table {order.tableNumber}
                         </span>
                       )}
                       {order.waiterName && (
-                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] text-indigo-700">
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-800 ring-1 ring-indigo-100">
                           Waiter: {order.waiterName}
                         </span>
                       )}
                     </div>
-                    <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${HISTORY_STATUS_BADGE[order.status]}`}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-white/85" aria-hidden />
                       {order.status}
                     </span>
                   </div>
-                  <div className="mb-1 text-[11px] text-slate-500">
-                    {new Date(order.createdAt).toLocaleString([], {
+                  <time
+                    className="mb-2 block text-[11px] font-medium text-slate-600"
+                    dateTime={order.createdAt}
+                  >
+                    {new Date(order.createdAt).toLocaleString(undefined, {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
-                      day: '2-digit',
-                      month: '2-digit',
                     })}
-                  </div>
-                  <ul className="mt-1 space-y-1 text-[11px] text-slate-800">
+                  </time>
+                  <ul className="space-y-1.5 text-[11px] text-slate-800">
                     {order.items.map((item) => (
-                      <li key={item._id} className="flex justify-between gap-2">
-                        <span>
-                          <span className="font-semibold">{item.quantity}×</span>{' '}
-                          {item.menuItem?.name ?? 'Unknown item'}
+                      <li
+                        key={item._id}
+                        className="flex justify-between gap-3 border-b border-slate-200/60 py-1 last:border-0 last:pb-0"
+                      >
+                        <span className="min-w-0">
+                          <span className="font-semibold text-slate-900">{item.quantity}×</span>{' '}
+                          <span className="text-slate-700">
+                            {item.menuItem?.name ?? 'Unknown item'}
+                          </span>
+                          {item.notes && (
+                            <span className="mt-0.5 block text-[10px] text-slate-500">
+                              {item.notes}
+                            </span>
+                          )}
                         </span>
                       </li>
                     ))}
                   </ul>
                   {order.notes && (
-                    <p className="mt-1 text-[11px] text-amber-700">Note: {order.notes}</p>
+                    <p className="mt-2 rounded-lg bg-amber-50/90 px-2.5 py-1.5 text-[11px] text-amber-900 ring-1 ring-amber-100">
+                      <span className="font-semibold">Note:</span> {order.notes}
+                    </p>
                   )}
-                </div>
+                </article>
               ))}
+
+              {sortedHistoryOrders.length === 0 && !historyError && (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-6 py-12 text-center">
+                  <p className="text-sm font-medium text-slate-700">No orders in this view</p>
+                  <p className="mx-auto mt-1 max-w-sm text-[12px] text-slate-500">
+                    Adjust filters above or tap <strong className="text-slate-700">Clear filters</strong> to
+                    see everything again.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

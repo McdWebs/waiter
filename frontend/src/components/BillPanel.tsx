@@ -34,6 +34,58 @@ const isCheckoutRequest = (call: { type?: ServiceCallType; notes?: string }) =>
   call.type === "checkout" ||
   call.notes?.toLowerCase().includes("checkout") === true;
 
+function BillPanelOrderSkeleton() {
+  return (
+    <div className="animate-pulse space-y-3">
+      {[0, 1].map((key) => (
+        <div
+          key={key}
+          className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="h-3 w-24 rounded bg-slate-200" />
+            <div className="h-3 w-14 rounded bg-slate-200" />
+          </div>
+          <div className="mb-2 h-2.5 w-28 rounded bg-slate-100" />
+          <ul className="mb-2 space-y-1.5">
+            <li className="flex justify-between gap-2">
+              <div className="h-2.5 flex-1 rounded bg-slate-200" />
+              <div className="h-2.5 w-12 shrink-0 rounded bg-slate-200" />
+            </li>
+            <li className="flex justify-between gap-2">
+              <div className="h-2.5 w-[65%] rounded bg-slate-100" />
+              <div className="h-2.5 w-10 shrink-0 rounded bg-slate-100" />
+            </li>
+            <li className="flex justify-between gap-2">
+              <div className="h-2.5 w-[55%] rounded bg-slate-100" />
+              <div className="h-2.5 w-10 shrink-0 rounded bg-slate-100" />
+            </li>
+          </ul>
+          <div className="flex items-center justify-between border-t border-slate-200 pt-2">
+            <div className="h-2.5 w-10 rounded bg-slate-200" />
+            <div className="h-3 w-16 rounded bg-slate-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BillPanelTotalsSkeleton() {
+  return (
+    <div className="mt-3 animate-pulse space-y-3 text-xs">
+      <div className="flex items-center justify-between">
+        <div className="h-3 w-20 rounded bg-slate-200" />
+        <div className="h-4 w-24 rounded bg-slate-200" />
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="h-[4.25rem] flex-1 rounded-xl bg-slate-100" />
+        <div className="h-[4.25rem] flex-1 rounded-2xl bg-slate-200" />
+      </div>
+    </div>
+  );
+}
+
 export default function BillPanel({
   restaurantId,
   open,
@@ -331,9 +383,7 @@ export default function BillPanel({
           </button>
         </div>
         <div className="max-h-72 space-y-3 overflow-y-auto border-y border-slate-200 py-2 text-xs">
-          {loading && (
-            <p className="text-xs text-slate-500">Loading your bill…</p>
-          )}
+          {loading && <BillPanelOrderSkeleton />}
           {loadError && !loading && (
             <p className="text-xs text-rose-500">{loadError}</p>
           )}
@@ -343,7 +393,8 @@ export default function BillPanel({
               it will appear here.
             </p>
           )}
-          {orders.map((order) => (
+          {!loading &&
+            orders.map((order) => (
             <div
               key={order._id}
               className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
@@ -399,9 +450,10 @@ export default function BillPanel({
                 </span>
               </div>
             </div>
-          ))}
+            ))}
         </div>
-        {orders.length > 0 && (
+        {loading && <BillPanelTotalsSkeleton />}
+        {!loading && orders.length > 0 && (
           <div className="mt-3 space-y-3 text-xs">
             <div className="flex items-center justify-between text-[11px] font-semibold text-slate-900">
               <span>Bill total</span>
@@ -448,7 +500,9 @@ export default function BillPanel({
             <button
               type="button"
               className="flex-1 rounded-full bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
-              disabled={callingWaiter || Boolean(activeCallId)}
+              disabled={
+                loading || callingWaiter || Boolean(activeCallId)
+              }
               onClick={() => void callWaiter()}
             >
               {callingWaiter
@@ -460,7 +514,9 @@ export default function BillPanel({
             <button
               type="button"
               className="flex-1 rounded-full bg-slate-900 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-700 disabled:opacity-60"
-              disabled={callingCheckout || Boolean(activeCheckoutCallId)}
+              disabled={
+                loading || callingCheckout || Boolean(activeCheckoutCallId)
+              }
               onClick={() => void callCheckout()}
             >
               {callingCheckout

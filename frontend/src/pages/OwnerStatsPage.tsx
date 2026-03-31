@@ -222,28 +222,28 @@ export default function OwnerStatsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 px-5 py-5 text-white shadow-md sm:px-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
+      <section className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 px-4 py-3 text-white shadow-md sm:px-5 sm:py-3.5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               Executive dashboard
             </p>
-            <h2 className="text-2xl font-bold tracking-tight">Your restaurant performance</h2>
-            <p className="max-w-2xl text-sm text-slate-200">
-              Deeper analytics for revenue, demand momentum, service quality, and assistant impact.
+            <h2 className="text-lg font-bold tracking-tight sm:text-xl">Your restaurant performance</h2>
+            <p className="max-w-2xl text-xs leading-relaxed text-slate-300 sm:text-[13px]">
+              Revenue, demand, service quality, and assistant impact.
             </p>
           </div>
-          <div className="flex flex-col items-start gap-2 sm:items-end sm:text-right">
+          <div className="flex shrink-0 flex-col items-stretch gap-1.5 sm:items-end sm:text-right">
             <button
               type="button"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-0"
             >
-              <span className={`inline-block h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}>↻</span>
-              {refreshing ? 'Refreshing…' : 'Refresh data'}
+              <span className={`inline-block h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`}>↻</span>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
             </button>
-            <p className="text-xs text-slate-200">
+            <p className="text-[10px] text-slate-400">
               Updated {lastUpdated ? lastUpdated.toLocaleTimeString() : 'just now'}
             </p>
           </div>
@@ -332,7 +332,7 @@ export default function OwnerStatsPage() {
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-900">Service channel mix</h3>
@@ -395,95 +395,101 @@ export default function OwnerStatsPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">Period comparison table</h3>
-              <span className="text-xs text-slate-500">Snapshot</span>
-            </div>
-            <div className="space-y-3">
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Orders</p>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <p className="text-slate-500">Today</p>
-                    <p className="font-semibold text-slate-900">{stats.ordersToday}</p>
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-900">Period comparison table</h3>
+                <span className="text-xs text-slate-500">Snapshot</span>
+              </div>
+              <div className="space-y-3">
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Orders</p>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <p className="text-slate-500">Today</p>
+                      <p className="font-semibold text-slate-900">{stats.ordersToday}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Week</p>
+                      <p className="font-semibold text-slate-900">{stats.ordersThisWeek}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Month</p>
+                      <p className="font-semibold text-slate-900">{stats.ordersThisMonth}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-slate-500">Week</p>
-                    <p className="font-semibold text-slate-900">{stats.ordersThisWeek}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Month</p>
-                    <p className="font-semibold text-slate-900">{stats.ordersThisMonth}</p>
+                </div>
+
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Revenue</p>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <p className="text-slate-500">Today</p>
+                      <p className="font-semibold text-slate-900">{formatCurrency(stats.revenueToday, currency)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Week</p>
+                      <p className="font-semibold text-slate-900">
+                        {formatCurrency(stats.revenueThisWeek, currency)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">Month</p>
+                      <p className="font-semibold text-slate-900">
+                        {formatCurrency(stats.revenueThisMonth, currency)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Revenue</p>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <p className="text-slate-500">Today</p>
-                    <p className="font-semibold text-slate-900">{formatCurrency(stats.revenueToday, currency)}</p>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900">Operational health</h3>
+              <div className="mt-4 space-y-4">
+                {[
+                  {
+                    label: 'Automation share',
+                    value: formatPercent(automationShare),
+                    progress: Math.min(100, Math.max(0, automationShare)),
+                    helper: `${stats.chatSessionsThisWeek} chat sessions this week`,
+                  },
+                  {
+                    label: 'Support load',
+                    value: formatPercent(supportLoad),
+                    progress: Math.min(100, Math.max(0, supportLoad)),
+                    helper: `${stats.waiterCallsHandledThisWeek} calls this week`,
+                  },
+                  {
+                    label: 'Response quality',
+                    value: responseHealth,
+                    progress: responseScore,
+                    helper:
+                      typeof responseTime === 'number'
+                        ? `${responseTime.toFixed(1)} min average response`
+                        : 'No response data yet',
+                  },
+                ].map((item) => (
+                  <div key={item.label} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm text-slate-700">{item.label}</p>
+                      <p className="text-sm font-semibold text-slate-900">{item.value}</p>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-slate-900 transition-all duration-300"
+                        style={{ width: `${item.progress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">{item.helper}</p>
                   </div>
-                  <div>
-                    <p className="text-slate-500">Week</p>
-                    <p className="font-semibold text-slate-900">{formatCurrency(stats.revenueThisWeek, currency)}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">Month</p>
-                    <p className="font-semibold text-slate-900">{formatCurrency(stats.revenueThisMonth, currency)}</p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
 
         <aside className="space-y-4 2xl:col-span-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900">Operational health</h3>
-            <div className="mt-4 space-y-4">
-              {[
-                {
-                  label: 'Automation share',
-                  value: formatPercent(automationShare),
-                  progress: Math.min(100, Math.max(0, automationShare)),
-                  helper: `${stats.chatSessionsThisWeek} chat sessions this week`,
-                },
-                {
-                  label: 'Support load',
-                  value: formatPercent(supportLoad),
-                  progress: Math.min(100, Math.max(0, supportLoad)),
-                  helper: `${stats.waiterCallsHandledThisWeek} calls this week`,
-                },
-                {
-                  label: 'Response quality',
-                  value: responseHealth,
-                  progress: responseScore,
-                  helper:
-                    typeof responseTime === 'number'
-                      ? `${responseTime.toFixed(1)} min average response`
-                      : 'No response data yet',
-                },
-              ].map((item) => (
-                <div key={item.label} className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-slate-700">{item.label}</p>
-                    <p className="text-sm font-semibold text-slate-900">{item.value}</p>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-slate-900 transition-all duration-300"
-                      style={{ width: `${item.progress}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500">{item.helper}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900">Focus recommendations</h3>
             <ul className="mt-3 space-y-3 text-sm text-slate-700">

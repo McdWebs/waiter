@@ -51,7 +51,11 @@ export default function MascotAssistantTrigger({
   )
 
   const imageSrc = candidates[Math.min(fallbackIndex, candidates.length - 1)]
-  const mascotSize = mode === 'floating' ? 'h-28 w-28' : 'h-12 w-12'
+  const mascotFrame =
+    mode === 'floating'
+      ? 'pointer-events-none absolute bottom-0 left-0 flex h-[calc(7rem*1.65)] w-28 items-end justify-center overflow-visible'
+      : 'inline-flex h-12 w-12 items-center justify-center'
+  const mascotImgBox = mode === 'floating' ? 'h-28 w-28 shrink-0' : 'h-full w-full'
   const mascotScale = mode === 'floating' ? 'scale-[1.65]' : 'scale-[1.05]'
 
   return (
@@ -61,14 +65,14 @@ export default function MascotAssistantTrigger({
       onClick={onClick}
       className={
         mode === 'floating'
-          ? 'group fixed bottom-14 right-3 z-30 focus:outline-none'
+          ? 'group fixed bottom-24 left-3 z-30 h-28 w-28 overflow-visible focus:outline-none'
           : 'group w-full rounded-2xl border border-emerald-200 bg-emerald-50/60 p-2 text-left transition-colors hover:bg-emerald-50 focus:outline-none'
       }
     >
       <span
         className={
           mode === 'floating'
-            ? 'relative block'
+            ? 'relative block h-full w-full'
             : 'flex items-center justify-between gap-2 text-right'
         }
       >
@@ -78,14 +82,14 @@ export default function MascotAssistantTrigger({
           </span>
         )}
         <span
-          className={`relative inline-flex items-center justify-center transition ${
+          className={`relative transition ${
             active ? 'drop-shadow-[0_0_14px_rgba(16,185,129,0.45)]' : 'drop-shadow-md'
-          } ${mascotSize}`}
+          } ${mascotFrame}`}
         >
           <img
             src={imageSrc}
             alt=""
-            className={`h-full w-full object-contain origin-bottom transition-transform ${mascotScale}`}
+            className={`${mascotImgBox} object-contain origin-bottom transition-transform ${mascotScale}`}
             onError={() => {
               setFallbackIndex((prev) => Math.min(prev + 1, candidates.length - 1))
             }}
