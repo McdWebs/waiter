@@ -16,9 +16,13 @@ interface WaiterCall {
   restaurantId: string
   tableNumber?: string
   notes?: string
+  type?: 'waiter' | 'checkout'
   status: 'open' | 'handled'
   createdAt: string
 }
+
+const isCheckoutRequest = (call: WaiterCall) =>
+  call.type === 'checkout' || call.notes?.toLowerCase().includes('checkout') === true
 
 interface RestaurantTable {
   _id: string
@@ -738,7 +742,7 @@ export default function KitchenDashboardPage() {
         )}
         {activeTab === 'orders' && !loading && waiterCalls.length > 0 && (
           <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3">
-            <h2 className="mb-2 text-sm font-semibold text-amber-900">Waiter calls</h2>
+            <h2 className="mb-2 text-sm font-semibold text-amber-900">Service requests</h2>
             <div className="space-y-2">
               {waiterCalls.map((call) => (
                 <div
@@ -750,6 +754,7 @@ export default function KitchenDashboardPage() {
                       {call.tableNumber ? `Table ${call.tableNumber}` : 'Unknown table'}
                     </div>
                     <div className="text-[11px] text-amber-800">
+                      {isCheckoutRequest(call) ? 'Checkout request' : 'Waiter call'} ·{' '}
                       Called at{' '}
                       {new Date(call.createdAt).toLocaleTimeString([], {
                         hour: '2-digit',
@@ -1093,7 +1098,7 @@ export default function KitchenDashboardPage() {
                   {table.waiterCalls.length > 0 && (
                     <div className="mb-2 rounded-xl bg-amber-50 px-2 py-2">
                       <p className="mb-1 text-[11px] font-semibold text-amber-900">
-                        Waiter calls
+                        Service requests
                       </p>
                       <div className="space-y-1">
                         {table.waiterCalls.map((call) => (
@@ -1102,6 +1107,7 @@ export default function KitchenDashboardPage() {
                             className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-2 py-1 text-[11px]"
                           >
                             <span className="text-amber-900">
+                              {isCheckoutRequest(call) ? 'Checkout request' : 'Waiter call'} ·{' '}
                               Called at{' '}
                               {new Date(call.createdAt).toLocaleTimeString([], {
                                 hour: '2-digit',

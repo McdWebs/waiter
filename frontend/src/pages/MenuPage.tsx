@@ -614,7 +614,7 @@ function MenuPageInner() {
           </div>
         </div>
       )}
-      {!itemDetailOpen && !cartOpen && !confirmOpen && !billOpen && (
+      {!itemDetailOpen && !cartOpen && !confirmOpen && (
         <MascotAssistantTrigger
           mode="floating"
           active={chatOpen}

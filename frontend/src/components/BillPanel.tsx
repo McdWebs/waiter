@@ -29,6 +29,11 @@ interface Props {
   onClose: () => void;
 }
 
+type ServiceCallType = "waiter" | "checkout";
+const isCheckoutRequest = (call: { type?: ServiceCallType; notes?: string }) =>
+  call.type === "checkout" ||
+  call.notes?.toLowerCase().includes("checkout") === true;
+
 export default function BillPanel({
   restaurantId,
   open,
@@ -43,10 +48,18 @@ export default function BillPanel({
   const [callSuccess, setCallSuccess] = useState(false);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [callHandled, setCallHandled] = useState(false);
+  const [callingCheckout, setCallingCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [activeCheckoutCallId, setActiveCheckoutCallId] = useState<string | null>(
+    null,
+  );
+  const [checkoutHandled, setCheckoutHandled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [, setMergedTables] = useState<string[] | null>(null);
   const callInFlightRef = useRef(false);
+  const checkoutInFlightRef = useRef(false);
   const billLoadBackoffUntilRef = useRef(0);
 
   useEffect(() => {
@@ -130,6 +143,10 @@ export default function BillPanel({
     setCallSuccess(false);
     setActiveCallId(null);
     setCallHandled(false);
+    setCheckoutError(null);
+    setCheckoutSuccess(false);
+    setActiveCheckoutCallId(null);
+    setCheckoutHandled(false);
   }, [open]);
 
   useEffect(() => {
@@ -142,6 +159,8 @@ export default function BillPanel({
         const data = (await res.json()) as {
           _id: string;
           tableNumber?: string;
+          type?: ServiceCallType;
+          notes?: string;
           status: "open" | "handled";
         }[];
         if (!res.ok) return;
@@ -150,13 +169,24 @@ export default function BillPanel({
             ? orders[orders.length - 1]?.tableNumber
             : undefined;
         const targetTable = latestOrderTable ?? tableNumber;
-        const existing = data.find((call) =>
-          targetTable ? call.tableNumber === targetTable : !call.tableNumber,
+        const existingWaiterCall = data.find(
+          (call) =>
+            (targetTable ? call.tableNumber === targetTable : !call.tableNumber) &&
+            !isCheckoutRequest(call),
         );
-        if (existing) {
-          setActiveCallId(existing._id);
+        const existingCheckoutCall = data.find((call) =>
+          (targetTable ? call.tableNumber === targetTable : !call.tableNumber) &&
+          isCheckoutRequest(call),
+        );
+        if (existingWaiterCall) {
+          setActiveCallId(existingWaiterCall._id);
           setCallSuccess(true);
           setCallHandled(false);
+        }
+        if (existingCheckoutCall) {
+          setActiveCheckoutCallId(existingCheckoutCall._id);
+          setCheckoutSuccess(true);
+          setCheckoutHandled(false);
         }
       } catch {
         // ignore – this is just a best-effort check
@@ -176,6 +206,14 @@ export default function BillPanel({
         if (current && current === payload.callId) {
           setCallHandled(true);
           setCallSuccess(false);
+          return null;
+        }
+        return current;
+      });
+      setActiveCheckoutCallId((current) => {
+        if (current && current === payload.callId) {
+          setCheckoutHandled(true);
+          setCheckoutSuccess(false);
           return null;
         }
         return current;
@@ -232,6 +270,42 @@ export default function BillPanel({
     } finally {
       setCallingWaiter(false);
       callInFlightRef.current = false;
+    }
+  };
+
+  const callCheckout = async () => {
+    if (checkoutInFlightRef.current || activeCheckoutCallId) return;
+    checkoutInFlightRef.current = true;
+    setCallingCheckout(true);
+    setCheckoutError(null);
+    setCheckoutSuccess(false);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/restaurants/${restaurantId}/waiter-calls`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tableNumber: effectiveTableNumber,
+            type: "checkout",
+            notes: "Checkout requested",
+          }),
+        },
+      );
+      const data = (await res.json()) as { _id?: string; message?: string };
+      if (!res.ok) {
+        throw new Error(data.message ?? "Failed to request checkout");
+      }
+      if (data._id) {
+        setActiveCheckoutCallId(data._id);
+      }
+      setCheckoutSuccess(true);
+      setCheckoutHandled(false);
+    } catch (err) {
+      setCheckoutError((err as Error).message);
+    } finally {
+      setCallingCheckout(false);
+      checkoutInFlightRef.current = false;
     }
   };
 
@@ -370,18 +444,32 @@ export default function BillPanel({
           </div>
         )}
         <div className="mt-3 space-y-1 border-t border-slate-200 pt-2 text-xs">
-          <button
-            type="button"
-            className="w-full rounded-full bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
-            disabled={callingWaiter || Boolean(activeCallId)}
-            onClick={() => void callWaiter()}
-          >
-            {callingWaiter
-              ? "Calling waiter…"
-              : activeCallId
-                ? "Waiter requested"
-                : "Call a waiter"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex-1 rounded-full bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+              disabled={callingWaiter || Boolean(activeCallId)}
+              onClick={() => void callWaiter()}
+            >
+              {callingWaiter
+                ? "Calling waiter…"
+                : activeCallId
+                  ? "Waiter requested"
+                  : "Call a waiter"}
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-full bg-slate-900 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-slate-700 disabled:opacity-60"
+              disabled={callingCheckout || Boolean(activeCheckoutCallId)}
+              onClick={() => void callCheckout()}
+            >
+              {callingCheckout
+                ? "Requesting checkout…"
+                : activeCheckoutCallId
+                  ? "Checkout requested"
+                  : "Checkout"}
+            </button>
+          </div>
           {callError && (
             <p className="text-[11px] text-rose-500">{callError}</p>
           )}
@@ -392,10 +480,25 @@ export default function BillPanel({
               .
             </p>
           )}
+          {checkoutError && (
+            <p className="text-[11px] text-rose-500">{checkoutError}</p>
+          )}
+          {checkoutSuccess && (
+            <p className="text-[11px] text-emerald-600">
+              Checkout request sent
+              {effectiveTableNumber ? ` for table ${effectiveTableNumber}` : ""}
+              .
+            </p>
+          )}
           {callHandled && !activeCallId && (
             <p className="text-[11px] text-emerald-600">
               Your last call was handled. You can call again if you need
               anything else.
+            </p>
+          )}
+          {checkoutHandled && !activeCheckoutCallId && (
+            <p className="text-[11px] text-emerald-600">
+              Your checkout request was handled.
             </p>
           )}
         </div>
