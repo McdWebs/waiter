@@ -215,18 +215,24 @@ router.delete('/restaurants/:restaurantId/orders', async (req, res) => {
 router.post('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
   try {
     const { restaurantId } = req.params
-    const { tableNumber, notes } = req.body as {
+    const { tableNumber, notes, type } = req.body as {
       tableNumber?: string
       notes?: string
+      type?: 'waiter' | 'checkout'
     }
 
     if (!Types.ObjectId.isValid(restaurantId)) {
       return res.status(400).json({ message: 'Invalid restaurantId' })
     }
+    const requestType = type ?? 'waiter'
+    if (!['waiter', 'checkout'].includes(requestType)) {
+      return res.status(400).json({ message: 'Invalid waiter call type' })
+    }
 
     const match: Record<string, unknown> = {
       restaurantId: new Types.ObjectId(restaurantId),
       status: 'open',
+      type: requestType,
     }
     if (tableNumber) {
       match.tableNumber = tableNumber
@@ -241,6 +247,7 @@ router.post('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
         restaurantId: existing.restaurantId,
         tableNumber: existing.tableNumber,
         notes: existing.notes,
+        type: existing.type ?? 'waiter',
         status: existing.status,
         createdAt: existing.createdAt,
       }
@@ -251,6 +258,7 @@ router.post('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
       restaurantId: new Types.ObjectId(restaurantId),
       ...(tableNumber ? { tableNumber } : {}),
       ...(notes ? { notes } : {}),
+      type: requestType,
       status: 'open',
     })
 
@@ -259,6 +267,7 @@ router.post('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
       restaurantId: call.restaurantId,
       tableNumber: call.tableNumber,
       notes: call.notes,
+      type: call.type ?? 'waiter',
       status: call.status,
       createdAt: call.createdAt,
     }
@@ -294,6 +303,7 @@ router.get('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
         restaurantId: call.restaurantId,
         tableNumber: call.tableNumber,
         notes: call.notes,
+        type: call.type ?? 'waiter',
         status: call.status,
         createdAt: call.createdAt,
       }))

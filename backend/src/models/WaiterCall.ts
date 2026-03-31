@@ -1,11 +1,13 @@
 import { Schema, model, type Document, type Types } from 'mongoose'
 
 export type WaiterCallStatus = 'open' | 'handled'
+export type WaiterCallType = 'waiter' | 'checkout'
 
 export interface WaiterCallDocument extends Document {
   restaurantId: Types.ObjectId
   tableNumber?: string
   notes?: string
+  type: WaiterCallType
   status: WaiterCallStatus
   createdAt: Date
   updatedAt: Date
@@ -17,6 +19,7 @@ const waiterCallSchema = new Schema<WaiterCallDocument>(
     restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
     tableNumber: { type: String },
     notes: { type: String },
+    type: { type: String, enum: ['waiter', 'checkout'], default: 'waiter' },
     status: { type: String, enum: ['open', 'handled'], default: 'open' },
     handledAt: { type: Date },
   },
