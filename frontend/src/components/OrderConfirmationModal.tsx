@@ -1,7 +1,7 @@
 import { useCart } from './CartContext'
 import { useState } from 'react'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 interface Props {
   restaurantId: string
@@ -31,6 +31,22 @@ export default function OrderConfirmationModal({
     setSubmitting(true)
     setError(null)
     try {
+      let waiterName: string | undefined
+      if (typeof window !== 'undefined' && tableNumber.trim()) {
+        try {
+          const stored = window.localStorage.getItem(`kitchenWaiterNames:${restaurantId}`)
+          if (stored) {
+            const parsed = JSON.parse(stored) as Record<string, string>
+            const fromTable = parsed?.[tableNumber.trim()]
+            if (typeof fromTable === 'string' && fromTable.trim()) {
+              waiterName = fromTable.trim()
+            }
+          }
+        } catch {
+          // ignore storage parsing errors
+        }
+      }
+
       const payloadItemsMap = new Map<string, { quantity: number; notes?: string }>()
       for (const item of items) {
         if (item.bundleItems && item.bundleItems.length > 0) {
@@ -57,6 +73,7 @@ export default function OrderConfirmationModal({
         body: JSON.stringify({
           restaurantId,
           tableNumber: tableNumber || undefined,
+          waiterName,
           notes: notes || undefined,
           items: Array.from(payloadItemsMap.entries()).map(([menuItemId, value]) => ({
             menuItemId,

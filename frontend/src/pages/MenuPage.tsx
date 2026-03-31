@@ -11,7 +11,7 @@ import CartDrawer from '../components/CartDrawer'
 import BillPanel from '../components/BillPanel'
 import MascotAssistantTrigger from '../components/MascotAssistantTrigger'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 let socket: Socket | null = null
 

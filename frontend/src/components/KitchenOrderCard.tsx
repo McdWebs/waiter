@@ -14,6 +14,7 @@ export interface KitchenOrder {
   status: 'new' | 'preparing' | 'ready'
   createdAt: string
   tableNumber?: string
+  waiterName?: string
   notes?: string
   items: KitchenOrderItem[]
 }
@@ -109,6 +110,11 @@ export default function KitchenOrderCard({ order, onChangeStatus, showPrint = tr
           {order.tableNumber && (
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
               Table {order.tableNumber}
+            </span>
+          )}
+          {order.waiterName && (
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] text-indigo-700">
+              Waiter: {order.waiterName}
             </span>
           )}
         </div>

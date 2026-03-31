@@ -7,7 +7,7 @@ import { useAuth } from '../components/AuthContext'
 import { apiFetch } from '../lib/api'
 import type { Restaurant } from '../components/types'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 let socket: Socket | null = null
 
@@ -74,6 +74,7 @@ export default function KitchenDashboardPage() {
   const [historyTo, setHistoryTo] = useState<string>('')
   const [collapsedTables, setCollapsedTables] = useState<Set<string>>(new Set())
   const [selectedTableKeys, setSelectedTableKeys] = useState<Set<string>>(new Set())
+  const [waiterNamesByTable, setWaiterNamesByTable] = useState<Record<string, string>>({})
   const [mergedClearLoading, setMergedClearLoading] = useState(false)
   const lastInitialOrdersFetchAtRef = useRef(0)
   const lastTablesFetchAtRef = useRef(0)
@@ -142,6 +143,38 @@ export default function KitchenDashboardPage() {
       // ignore localStorage errors
     }
   }, [activeTab, restaurantId])
+
+  const waiterNamesStorageKey = restaurantId
+    ? `kitchenWaiterNames:${restaurantId}`
+    : 'kitchenWaiterNames'
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const stored = window.localStorage.getItem(waiterNamesStorageKey)
+      if (!stored) {
+        setWaiterNamesByTable({})
+        return
+      }
+      const parsed = JSON.parse(stored) as Record<string, string>
+      if (!parsed || typeof parsed !== 'object') {
+        setWaiterNamesByTable({})
+        return
+      }
+      setWaiterNamesByTable(parsed)
+    } catch {
+      setWaiterNamesByTable({})
+    }
+  }, [waiterNamesStorageKey])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(waiterNamesStorageKey, JSON.stringify(waiterNamesByTable))
+    } catch {
+      // ignore localStorage errors
+    }
+  }, [waiterNamesByTable, waiterNamesStorageKey])
 
   useEffect(() => {
     const load = async () => {
@@ -456,6 +489,14 @@ export default function KitchenDashboardPage() {
           tableNumber ? order.tableNumber !== tableNumber : Boolean(order.tableNumber)
         )
       )
+      if (tableNumber) {
+        setWaiterNamesByTable((prev) => {
+          if (!(tableNumber in prev)) return prev
+          const next = { ...prev }
+          delete next[tableNumber]
+          return next
+        })
+      }
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error(err)
@@ -473,6 +514,43 @@ export default function KitchenDashboardPage() {
       setSelectedTableKeys(new Set())
     } finally {
       setMergedClearLoading(false)
+    }
+  }
+
+  const persistWaiterNameForTable = async (tableNumber: string, waiterName: string) => {
+    if (!restaurantId) return
+    try {
+      await fetch(`${API_BASE}/api/restaurants/${restaurantId}/orders/waiter-name`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableNumber,
+          waiterName: waiterName.trim() || undefined,
+        }),
+      })
+      const normalized = waiterName.trim()
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.tableNumber === tableNumber
+            ? {
+                ...order,
+                waiterName: normalized || undefined,
+              }
+            : order
+        )
+      )
+      setHistoryOrders((prev) =>
+        prev.map((order) =>
+          order.tableNumber === tableNumber
+            ? {
+                ...order,
+                waiterName: normalized || undefined,
+              }
+            : order
+        )
+      )
+    } catch {
+      // ignore update failures; local input value stays for quick access
     }
   }
 
@@ -1037,33 +1115,62 @@ export default function KitchenDashboardPage() {
               const activeOrders = table.orders.filter((o) => o.status !== 'ready')
               const readyOrders = table.orders.filter((o) => o.status === 'ready')
               const isCollapsed = collapsedTables.has(table.key)
+              const waiterName = table.key === 'no-table' ? '' : waiterNamesByTable[table.key] ?? ''
               return (
                 <div
                   key={table.key}
                   className="rounded-2xl border border-slate-200 bg-white text-sm shadow-sm overflow-hidden"
                 >
                   <div className="flex items-center justify-between gap-2 p-3">
-                    <button
-                      type="button"
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      onClick={() => toggleTableCollapsed(table.key)}
-                      aria-expanded={!isCollapsed}
-                    >
-                      <span
-                        className={`shrink-0 text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
-                        aria-hidden
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                        onClick={() => toggleTableCollapsed(table.key)}
+                        aria-expanded={!isCollapsed}
                       >
-                        ▶
-                      </span>
-                      <div className="min-w-0">
-                        <h2 className="text-sm font-semibold text-slate-900">
-                          {table.label}
-                        </h2>
-                        <p className="text-[11px] text-slate-500">
-                          {table.orders.length} orders · {table.waiterCalls.length} waiter calls
-                        </p>
-                      </div>
-                    </button>
+                        <span
+                          className={`shrink-0 text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                          aria-hidden
+                        >
+                          ▶
+                        </span>
+                        <div className="min-w-0">
+                          <h2 className="text-sm font-semibold text-slate-900">
+                            {table.label}
+                          </h2>
+                          <p className="text-[11px] text-slate-500">
+                            {table.orders.length} orders · {table.waiterCalls.length} waiter calls
+                          </p>
+                        </div>
+                      </button>
+                      {table.key !== 'no-table' && (
+                        <input
+                          type="text"
+                          value={waiterName}
+                          onChange={(e) => {
+                            const nextName = e.target.value
+                            setWaiterNamesByTable((prev) => ({
+                              ...prev,
+                              [table.key]: nextName,
+                            }))
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          onBlur={() => {
+                            void persistWaiterNameForTable(table.key, waiterName)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              void persistWaiterNameForTable(table.key, waiterName)
+                            }
+                          }}
+                          placeholder="Waiter"
+                          className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-400"
+                          aria-label={`Waiter for ${table.label}`}
+                        />
+                      )}
+                    </div>
                     {table.orders.length > 0 && (
                       <button
                         type="button"
@@ -1300,6 +1407,11 @@ export default function KitchenDashboardPage() {
                       {order.tableNumber && (
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
                           Table {order.tableNumber}
+                        </span>
+                      )}
+                      {order.waiterName && (
+                        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] text-indigo-700">
+                          Waiter: {order.waiterName}
                         </span>
                       )}
                     </div>

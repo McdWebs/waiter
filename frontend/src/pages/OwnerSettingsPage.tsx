@@ -5,7 +5,7 @@ import { apiFetch } from '../lib/api'
 import type { Restaurant } from '../components/types'
 import MapLocationPicker from '../components/MapLocationPicker'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 const CURRENCIES = [
   { value: 'USD', label: 'USD ($)' },

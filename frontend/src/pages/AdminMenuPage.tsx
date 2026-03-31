@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import type { BusinessPlan, MenuCategory, MenuItem, Restaurant } from '../components/types'
 import { useAuth } from '../components/AuthContext'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 interface AdminMenuResponse {
   restaurant: Restaurant

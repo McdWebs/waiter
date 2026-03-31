@@ -11,9 +11,10 @@ const router = express.Router()
 
 router.post('/orders', async (req, res) => {
   try {
-    const { restaurantId, tableNumber, items, notes } = req.body as {
+    const { restaurantId, tableNumber, waiterName, items, notes } = req.body as {
       restaurantId?: string
       tableNumber?: string
+      waiterName?: string
       notes?: string
       items?: { menuItemId?: string; quantity?: number; notes?: string }[]
     }
@@ -69,6 +70,7 @@ router.post('/orders', async (req, res) => {
       restaurantId: new Types.ObjectId(restaurantId),
       status: 'new',
       ...(tableNumber ? { tableNumber } : {}),
+      ...(waiterName ? { waiterName: waiterName.trim() } : {}),
       ...(notes ? { notes } : {}),
     })
 
@@ -98,6 +100,7 @@ router.post('/orders', async (req, res) => {
       status: order.status,
       createdAt: order.createdAt,
       tableNumber: order.tableNumber,
+      waiterName: order.waiterName,
       notes: order.notes,
       items: populatedItems.map((oi) => ({
         _id: oi._id,
@@ -209,6 +212,43 @@ router.delete('/restaurants/:restaurantId/orders', async (req, res) => {
     // eslint-disable-next-line no-console
     console.error(err)
     return res.status(500).json({ message: 'Failed to clear table' })
+  }
+})
+
+router.patch('/restaurants/:restaurantId/orders/waiter-name', async (req, res) => {
+  try {
+    const { restaurantId } = req.params
+    const { tableNumber, waiterName } = req.body as { tableNumber?: string; waiterName?: string }
+
+    if (!Types.ObjectId.isValid(restaurantId)) {
+      return res.status(400).json({ message: 'Invalid restaurantId' })
+    }
+
+    const normalizedTable = tableNumber?.trim()
+    if (!normalizedTable) {
+      return res.status(400).json({ message: 'Table number is required' })
+    }
+
+    const normalizedWaiterName = waiterName?.trim() ?? ''
+
+    const result = await Order.updateMany(
+      {
+        restaurantId: new Types.ObjectId(restaurantId),
+        tableNumber: normalizedTable,
+        closedAt: { $exists: false },
+      },
+      {
+        ...(normalizedWaiterName
+          ? { $set: { waiterName: normalizedWaiterName } }
+          : { $unset: { waiterName: 1 } }),
+      }
+    )
+
+    return res.json({ updatedOrders: result.modifiedCount ?? 0 })
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err)
+    return res.status(500).json({ message: 'Failed to update waiter name' })
   }
 })
 

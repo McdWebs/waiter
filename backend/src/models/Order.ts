@@ -8,6 +8,7 @@ export interface OrderDocument extends Document {
   createdAt: Date
   updatedAt: Date
   tableNumber?: string
+  waiterName?: string
   notes?: string
   closedAt?: Date
 }
@@ -17,6 +18,7 @@ const orderSchema = new Schema<OrderDocument>(
     restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
     status: { type: String, enum: ['new', 'preparing', 'ready'], default: 'new' },
     tableNumber: { type: String },
+    waiterName: { type: String },
     notes: { type: String },
     closedAt: { type: Date },
   },
