@@ -31,6 +31,26 @@ export default function OrderConfirmationModal({
     setSubmitting(true)
     setError(null)
     try {
+      const payloadItemsMap = new Map<string, { quantity: number; notes?: string }>()
+      for (const item of items) {
+        if (item.bundleItems && item.bundleItems.length > 0) {
+          for (const bundled of item.bundleItems) {
+            const existing = payloadItemsMap.get(bundled.menuItemId)
+            const nextQty = bundled.quantity * item.quantity
+            payloadItemsMap.set(bundled.menuItemId, {
+              quantity: (existing?.quantity ?? 0) + nextQty,
+              notes: existing?.notes ?? item.notes,
+            })
+          }
+          continue
+        }
+        const existing = payloadItemsMap.get(item.menuItemId)
+        payloadItemsMap.set(item.menuItemId, {
+          quantity: (existing?.quantity ?? 0) + item.quantity,
+          notes: existing?.notes ?? item.notes,
+        })
+      }
+
       const res = await fetch(`${API_BASE}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,10 +58,10 @@ export default function OrderConfirmationModal({
           restaurantId,
           tableNumber: tableNumber || undefined,
           notes: notes || undefined,
-          items: items.map((item) => ({
-            menuItemId: item.menuItemId,
-            quantity: item.quantity,
-            notes: item.notes,
+          items: Array.from(payloadItemsMap.entries()).map(([menuItemId, value]) => ({
+            menuItemId,
+            quantity: value.quantity,
+            notes: value.notes,
           })),
         }),
       })

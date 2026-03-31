@@ -3,7 +3,12 @@ import type { CartItem, MenuItem } from './types'
 
 interface CartContextValue {
   items: CartItem[]
-  addItem: (item: MenuItem, quantity?: number, notes?: string) => void
+  addItem: (
+    item: MenuItem,
+    quantity?: number,
+    notes?: string,
+    options?: { bundleItems?: { menuItemId: string; quantity: number }[] }
+  ) => void
   updateItem: (menuItemId: string, quantity: number, notes?: string) => void
   removeItem: (menuItemId: string) => void
   clear: () => void
@@ -54,7 +59,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, storageKey])
 
-  const addItem = (item: MenuItem, quantity = 1, notes?: string) => {
+  const addItem = (
+    item: MenuItem,
+    quantity = 1,
+    notes?: string,
+    options?: { bundleItems?: { menuItemId: string; quantity: number }[] }
+  ) => {
     setItems((prev) => {
       const existing = prev.find((p) => p.menuItemId === item._id)
       if (existing) {
@@ -73,6 +83,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           quantity,
           notes,
           imageUrl: item.imageUrl,
+          bundleItems: options?.bundleItems,
         },
       ]
     })

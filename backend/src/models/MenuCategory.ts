@@ -12,4 +12,6 @@ const menuCategorySchema = new Schema<MenuCategoryDocument>({
   position: { type: Number, default: 0 },
 })
 
+menuCategorySchema.index({ restaurantId: 1, position: 1 })
+
 export const MenuCategory = model<MenuCategoryDocument>('MenuCategory', menuCategorySchema)

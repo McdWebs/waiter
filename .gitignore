@@ -8,3 +8,6 @@ frontend/.env
 
 # macOS cruft
 .DS_Store
+
+# Claude config and metadata
+.claude/

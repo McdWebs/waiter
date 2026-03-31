@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useCart } from './CartContext'
 import type { SuggestedItem } from './types'
 import emptyCartIllustration from '../assets/empty-cart-illustration.png'
+import MascotAssistantTrigger from './MascotAssistantTrigger'
 
 interface MenuItemImage {
   _id: string
@@ -296,13 +297,13 @@ export default function CartDrawer({
             </span>
           </div>
           <div className="mb-2 flex flex-col gap-2">
-            <button
-              type="button"
-              className="w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+            <MascotAssistantTrigger
+              mode="inline"
+              active={chatOpen}
+              loading={chatLoading}
               onClick={() => setChatOpen((open) => !open)}
-            >
-              {chatOpen ? 'Hide assistant' : 'Ask the assistant about this order'}
-            </button>
+              label={chatOpen ? 'Hide Servo order assistant' : 'Talk to Servo about this order'}
+            />
             <button
               type="button"
               className="w-full rounded-full bg-emerald-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600"

@@ -81,6 +81,9 @@ export default function OwnerSettingsPage() {
     businessPlanDescription: '',
     businessPlanTimeNote: '',
     businessPlanPrice: '' as number | '',
+    websiteUrl: '',
+    instagramUrl: '',
+    facebookUrl: '',
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -126,6 +129,9 @@ export default function OwnerSettingsPage() {
         businessPlanTimeNote: restaurant.businessPlanTimeNote ?? '',
         businessPlanPrice:
           restaurant.businessPlanPrice != null ? restaurant.businessPlanPrice : '',
+        websiteUrl: restaurant.websiteUrl ?? '',
+        instagramUrl: restaurant.instagramUrl ?? '',
+        facebookUrl: restaurant.facebookUrl ?? '',
       })
     }
   }, [restaurant])
@@ -178,6 +184,9 @@ export default function OwnerSettingsPage() {
       if (typeof form.businessPlanPrice === 'number') {
         body.businessPlanPrice = form.businessPlanPrice
       }
+      body.websiteUrl = form.websiteUrl.trim() || undefined
+      body.instagramUrl = form.instagramUrl.trim() || undefined
+      body.facebookUrl = form.facebookUrl.trim() || undefined
       const updated = await apiFetch<Restaurant>(`/api/restaurants/${restaurant._id}`, {
         method: 'PATCH',
         token,
@@ -289,7 +298,10 @@ export default function OwnerSettingsPage() {
     (form.businessPlanTimeNote ?? '') ===
       (restaurant.businessPlanTimeNote ?? '') &&
     form.businessPlanPrice ===
-      (restaurant.businessPlanPrice != null ? restaurant.businessPlanPrice : '')
+      (restaurant.businessPlanPrice != null ? restaurant.businessPlanPrice : '') &&
+    (form.websiteUrl ?? '') === (restaurant.websiteUrl ?? '') &&
+    (form.instagramUrl ?? '') === (restaurant.instagramUrl ?? '') &&
+    (form.facebookUrl ?? '') === (restaurant.facebookUrl ?? '')
 
   return (
     <div className="space-y-4">
@@ -533,6 +545,59 @@ export default function OwnerSettingsPage() {
                   className={inputClass}
                   placeholder="contact@restaurant.com"
                 />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:py-4">
+            <h2 className="text-sm font-semibold text-slate-900">Online presence</h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Social links shown in the footer of your guest menu.
+            </p>
+            <div className="mt-3 space-y-3 text-sm">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-1">
+                  <label htmlFor="websiteUrl" className={labelClass}>
+                    Website
+                  </label>
+                  <input
+                    id="websiteUrl"
+                    name="websiteUrl"
+                    type="url"
+                    value={form.websiteUrl}
+                    onChange={(e) => handleChange('websiteUrl', e.target.value)}
+                    className={inputClass}
+                    placeholder="https://yourrestaurant.com"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="instagramUrl" className={labelClass}>
+                    Instagram
+                  </label>
+                  <input
+                    id="instagramUrl"
+                    name="instagramUrl"
+                    type="url"
+                    value={form.instagramUrl}
+                    onChange={(e) => handleChange('instagramUrl', e.target.value)}
+                    className={inputClass}
+                    placeholder="https://instagram.com/yourpage"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="facebookUrl" className={labelClass}>
+                    Facebook
+                  </label>
+                  <input
+                    id="facebookUrl"
+                    name="facebookUrl"
+                    type="url"
+                    value={form.facebookUrl}
+                    onChange={(e) => handleChange('facebookUrl', e.target.value)}
+                    className={inputClass}
+                    placeholder="https://facebook.com/yourpage"
+                  />
+                </div>
               </div>
             </div>
           </div>

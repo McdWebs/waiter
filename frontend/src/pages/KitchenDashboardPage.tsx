@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import KitchenOrderCard, { type KitchenOrder } from '../components/KitchenOrderCard'
 import emptyCartIllustration from '../assets/empty-cart-illustration.png'
 import { useAuth } from '../components/AuthContext'
+import { apiFetch } from '../lib/api'
+import type { Restaurant } from '../components/types'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
 
@@ -28,7 +30,8 @@ interface RestaurantTable {
 
 export default function KitchenDashboardPage() {
   const { restaurantId } = useParams<{ restaurantId: string }>()
-  const { restaurant } = useAuth()
+  const { restaurant, token, updateRestaurant } = useAuth()
+  const [pausingOrders, setPausingOrders] = useState(false)
   const [orders, setOrders] = useState<KitchenOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -68,6 +71,9 @@ export default function KitchenDashboardPage() {
   const [collapsedTables, setCollapsedTables] = useState<Set<string>>(new Set())
   const [selectedTableKeys, setSelectedTableKeys] = useState<Set<string>>(new Set())
   const [mergedClearLoading, setMergedClearLoading] = useState(false)
+  const lastInitialOrdersFetchAtRef = useRef(0)
+  const lastTablesFetchAtRef = useRef(0)
+  const pollBackoffUntilRef = useRef(0)
 
   const toggleTableCollapsed = (tableKey: string) => {
     setCollapsedTables((prev) => {
@@ -136,11 +142,20 @@ export default function KitchenDashboardPage() {
   useEffect(() => {
     const load = async () => {
       if (!restaurantId) return
+      const now = Date.now()
+      // React StrictMode in dev can run effects twice on mount; avoid duplicate immediate calls.
+      if (now - lastInitialOrdersFetchAtRef.current < 1200) return
+      lastInitialOrdersFetchAtRef.current = now
       setLoading(true)
       setError(null)
       try {
         const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/orders`)
         const data = (await res.json()) as KitchenOrder[] & { message?: string }
+        if (res.status === 429) {
+          setError('Rate limited. Retrying automatically in a few seconds.')
+          pollBackoffUntilRef.current = Date.now() + 15000
+          return
+        }
         if (!res.ok) {
           throw new Error(data.message ?? 'Failed to load orders')
         }
@@ -149,6 +164,11 @@ export default function KitchenDashboardPage() {
           `${API_BASE}/api/restaurants/${restaurantId}/waiter-calls`
         )
         const waiterData = (await waiterRes.json()) as WaiterCall[] & { message?: string }
+        if (waiterRes.status === 429) {
+          setError('Rate limited. Retrying automatically in a few seconds.')
+          pollBackoffUntilRef.current = Date.now() + 15000
+          return
+        }
         if (!waiterRes.ok) {
           throw new Error(waiterData.message ?? 'Failed to load waiter calls')
         }
@@ -167,9 +187,14 @@ export default function KitchenDashboardPage() {
     if (!restaurantId || activeTab !== 'orders') return
 
     const intervalId = window.setInterval(async () => {
+      if (Date.now() < pollBackoffUntilRef.current) return
       try {
         const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/orders`)
         const data = (await res.json()) as KitchenOrder[] & { message?: string }
+        if (res.status === 429) {
+          pollBackoffUntilRef.current = Date.now() + 15000
+          return
+        }
         if (res.ok) {
           setOrders(data)
         }
@@ -177,6 +202,10 @@ export default function KitchenDashboardPage() {
           `${API_BASE}/api/restaurants/${restaurantId}/waiter-calls`
         )
         const waiterData = (await waiterRes.json()) as WaiterCall[] & { message?: string }
+        if (waiterRes.status === 429) {
+          pollBackoffUntilRef.current = Date.now() + 15000
+          return
+        }
         if (waiterRes.ok) {
           setWaiterCalls(waiterData)
         }
@@ -193,10 +222,17 @@ export default function KitchenDashboardPage() {
   useEffect(() => {
     const loadTables = async () => {
       if (!restaurantId) return
+      const now = Date.now()
+      // Avoid duplicate initial table request from StrictMode dev effect replay.
+      if (now - lastTablesFetchAtRef.current < 1200) return
+      lastTablesFetchAtRef.current = now
       setTablesLoading(true)
       try {
         const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/tables`)
         const data = (await res.json()) as RestaurantTable[] & { message?: string }
+        if (res.status === 429) {
+          return
+        }
         if (!res.ok) {
           throw new Error(data.message ?? 'Failed to load tables')
         }
@@ -581,11 +617,30 @@ export default function KitchenDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
+  const isAcceptingOrders = restaurant?.allowOrders !== false
+
+  const handleToggleOrders = async () => {
+    if (!restaurant || !token) return
+    setPausingOrders(true)
+    try {
+      const updated = await apiFetch<Restaurant>(`/api/restaurants/${restaurant._id}`, {
+        method: 'PATCH',
+        token,
+        body: JSON.stringify({ allowOrders: !isAcceptingOrders }),
+      })
+      updateRestaurant(updated)
+    } catch {
+      // ignore; the UI will just stay in its previous state
+    } finally {
+      setPausingOrders(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-4xl px-4 py-4">
-        <header className="mb-5 flex items-center justify-between">
-          <div>
+        <header className="mb-5 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
               {restaurant && restaurantId === restaurant._id && restaurant.name
                 ? `${restaurant.name} · Kitchen`
@@ -595,6 +650,25 @@ export default function KitchenDashboardPage() {
               Incoming orders and waiter calls in real time.
             </p>
           </div>
+          {restaurant && restaurantId === restaurant._id && token && (
+            <button
+              type="button"
+              onClick={() => { void handleToggleOrders() }}
+              disabled={pausingOrders}
+              className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                isAcceptingOrders
+                  ? 'bg-emerald-100 text-emerald-800 hover:bg-red-100 hover:text-red-700'
+                  : 'bg-red-100 text-red-700 hover:bg-emerald-100 hover:text-emerald-800'
+              }`}
+              title={isAcceptingOrders ? 'Click to pause new orders' : 'Click to resume accepting orders'}
+            >
+              {pausingOrders
+                ? '…'
+                : isAcceptingOrders
+                  ? 'Orders: ON'
+                  : 'Orders: PAUSED'}
+            </button>
+          )}
         </header>
         <div className="mb-4 flex gap-2 rounded-full bg-slate-100 p-1 text-xs">
           <button

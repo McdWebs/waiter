@@ -24,4 +24,7 @@ const menuItemSchema = new Schema<MenuItemDocument>({
   available: { type: Boolean, default: true },
 })
 
+menuItemSchema.index({ categoryId: 1, position: 1 })
+menuItemSchema.index({ categoryId: 1, available: 1 })
+
 export const MenuItem = model<MenuItemDocument>('MenuItem', menuItemSchema)

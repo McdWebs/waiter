@@ -23,10 +23,13 @@ router.post('/orders', async (req, res) => {
     }
 
     const restaurant = await Restaurant.findById(restaurantId)
-      .select({ isSuspended: 1, timezone: 1 })
+      .select({ isSuspended: 1, allowOrders: 1, timezone: 1 })
       .lean()
     if (!restaurant || restaurant.isSuspended) {
       return res.status(404).json({ message: 'Restaurant not found' })
+    }
+    if (restaurant.allowOrders === false) {
+      return res.status(503).json({ message: 'This restaurant is not accepting orders right now' })
     }
 
     if (!items || items.length === 0) {
@@ -43,13 +46,13 @@ router.post('/orders', async (req, res) => {
     }
 
     const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } })
-      .select({ _id: 1, available: 1, name: 1 })
+      .select({ _id: 1, available: 1, name: 1, price: 1 })
       .lean()
 
     const unavailableNames: string[] = []
-    const availableMap = new Map<string, boolean | undefined>()
+    const menuItemMap = new Map<string, { available: boolean | undefined; price: number; name: string }>()
     for (const mi of menuItems) {
-      availableMap.set(mi._id.toString(), mi.available)
+      menuItemMap.set(mi._id.toString(), { available: mi.available, price: mi.price, name: mi.name })
       if (mi.available === false) {
         unavailableNames.push(mi.name)
       }
@@ -70,12 +73,19 @@ router.post('/orders', async (req, res) => {
     })
 
     const orderItems = await OrderItem.insertMany(
-      items.map((item) => ({
-        orderId: order._id,
-        menuItemId: item.menuItemId,
-        quantity: item.quantity ?? 1,
-        notes: item.notes ?? undefined,
-      }))
+      items.map((item) => {
+        const menuItem = menuItemMap.get(item.menuItemId ?? '')
+        return {
+          orderId: order._id,
+          menuItemId: item.menuItemId,
+          quantity: item.quantity ?? 1,
+          notes: item.notes ?? undefined,
+          // Snapshot price and name so historical data stays accurate even if
+          // the menu item is edited or deleted later.
+          priceAtOrder: menuItem?.price ?? 0,
+          nameAtOrder: menuItem?.name ?? '',
+        }
+      })
     )
 
     const populatedItems = await OrderItem.find({ _id: { $in: orderItems.map((i) => i._id) } })

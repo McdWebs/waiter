@@ -57,6 +57,9 @@ export interface Restaurant {
   printerEnabled?: boolean
   printerName?: string
   logoUrl?: string
+  websiteUrl?: string
+  instagramUrl?: string
+  facebookUrl?: string
   businessPlanEnabled?: boolean
   businessPlanTitle?: string
   businessPlanDescription?: string
@@ -72,5 +75,9 @@ export interface CartItem {
   quantity: number
   notes?: string
   imageUrl?: string
+  /**
+   * For bundle rows (e.g. business meal), submit these real menu items to backend.
+   */
+  bundleItems?: { menuItemId: string; quantity: number }[]
 }
 

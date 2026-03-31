@@ -286,12 +286,31 @@ router.patch('/restaurants/:restaurantId', authenticateOwner, async (req, res) =
         unset = { ...(unset ?? {}), logoUrl: 1 }
       }
     }
-
-    if (unset && Object.keys(unset).length > 0) {
-      ;(update as any).$unset = unset
+    // Social / web presence links
+    for (const field of ['websiteUrl', 'instagramUrl', 'facebookUrl'] as const) {
+      if (typeof body[field] === 'string') {
+        const trimmed = (body[field] as string).trim()
+        if (trimmed) {
+          update[field] = trimmed
+        } else {
+          unset = { ...(unset ?? {}), [field]: 1 }
+        }
+      }
     }
 
-    const restaurant = await Restaurant.findByIdAndUpdate(restaurantIdParam, update, {
+    // Build an explicit update operator document so that $set and $unset are
+    // never mixed with plain field keys.  Mixing plain keys with $ operators
+    // causes Mongoose to skip its auto-$set wrapping, which silently drops
+    // any non-operator fields from the update.
+    const updateOp: Record<string, unknown> = {}
+    if (Object.keys(update).length > 0) {
+      updateOp.$set = update
+    }
+    if (unset && Object.keys(unset).length > 0) {
+      updateOp.$unset = unset
+    }
+
+    const restaurant = await Restaurant.findByIdAndUpdate(restaurantIdParam, updateOp, {
       returnDocument: 'after',
     }).lean()
 

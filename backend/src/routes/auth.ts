@@ -194,7 +194,19 @@ router.post('/auth/super-admin/login', async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase()
     const emails = allowedEmails.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
-    if (!emails.includes(normalizedEmail) || password !== expectedPassword) {
+    if (!emails.includes(normalizedEmail)) {
+      return res.status(401).json({ message: 'Invalid email or password' })
+    }
+
+    // Support both bcrypt hashes (starting with $2b$) and plain-text passwords for
+    // backward-compatibility. New deployments should store a bcrypt hash in
+    // SUPER_ADMIN_PASSWORD (e.g. generated with: node -e "const b=require('bcrypt');b.hash('pw',12).then(console.log)").
+    const isBcryptHash = expectedPassword.startsWith('$2b$') || expectedPassword.startsWith('$2a$')
+    const passwordValid = isBcryptHash
+      ? await bcrypt.compare(password, expectedPassword)
+      : password === expectedPassword
+
+    if (!passwordValid) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
 

@@ -47,10 +47,12 @@ export default function BillPanel({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [, setMergedTables] = useState<string[] | null>(null);
   const callInFlightRef = useRef(false);
+  const billLoadBackoffUntilRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
     const load = async () => {
+      if (Date.now() < billLoadBackoffUntilRef.current) return;
       setLoading(true);
       setLoadError(null);
       try {
@@ -65,6 +67,13 @@ export default function BillPanel({
               merged: { tables: string[] } | null;
               message?: string;
             };
+            if (mergeRes.status === 429) {
+              billLoadBackoffUntilRef.current = Date.now() + 15000;
+              setLoadError(
+                "Too many requests right now. Please wait a few seconds and try again.",
+              );
+              return;
+            }
             if (mergeRes.ok && mergeData.merged?.tables?.length) {
               tablesToInclude = mergeData.merged.tables;
               setMergedTables(mergeData.merged.tables);
@@ -86,6 +95,14 @@ export default function BillPanel({
         const data = (await res.json()) as (BillOrder & {
           status?: string;
         })[] & { message?: string };
+        if (res.status === 429) {
+          billLoadBackoffUntilRef.current = Date.now() + 15000;
+          setLoadError(
+            "Too many requests right now. Please wait a few seconds and try again.",
+          );
+          setOrders([]);
+          return;
+        }
         if (!res.ok) {
           throw new Error(data.message ?? "Failed to load bill");
         }
@@ -246,7 +263,7 @@ export default function BillPanel({
           {loadError && !loading && (
             <p className="text-xs text-rose-500">{loadError}</p>
           )}
-          {orders.length === 0 && (
+          {orders.length === 0 && !loading && !loadError && (
             <p className="text-xs text-slate-500">
               You don&apos;t have any sent orders yet. After you send an order,
               it will appear here.

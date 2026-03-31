@@ -25,6 +25,10 @@ export interface RestaurantDocument extends Document {
   printerName?: string
   /** Optional logo image URL for guest menu & admin views. */
   logoUrl?: string
+  /** Optional social / web presence links shown in the guest menu footer. */
+  websiteUrl?: string
+  instagramUrl?: string
+  facebookUrl?: string
   /** Optional “business plan meal” (עסקית) configuration. */
   businessPlanEnabled?: boolean
   businessPlanTitle?: string
@@ -55,6 +59,9 @@ const restaurantSchema = new Schema<RestaurantDocument>({
   printerEnabled: { type: Boolean, default: false },
   printerName: { type: String, trim: true },
   logoUrl: { type: String },
+  websiteUrl: { type: String, trim: true },
+  instagramUrl: { type: String, trim: true },
+  facebookUrl: { type: String, trim: true },
   businessPlanEnabled: { type: Boolean, default: false },
   businessPlanTitle: { type: String, trim: true },
   businessPlanDescription: { type: String, trim: true },

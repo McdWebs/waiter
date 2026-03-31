@@ -23,6 +23,7 @@ export default function ChatPanel({ restaurantId, tableKey, open, onClose, curre
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [avatarSrc, setAvatarSrc] = useState('/mascot/images/servo_talking_chat.png')
   const listRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -104,8 +105,19 @@ export default function ChatPanel({ restaurantId, tableKey, open, onClose, curre
     <div className="fixed bottom-20 left-0 right-0 z-40 flex justify-center px-4">
       <div className="flex w-full max-w-md max-h-[60vh] flex-col overflow-hidden rounded-3xl border border-emerald-500/50 bg-white shadow-2xl shadow-emerald-500/25">
         <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-50/90 px-4 py-3 rounded-t-3xl">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">Ask before ordering</h2>
+          <div className="flex items-center gap-2">
+            <div className="h-11 w-11 overflow-visible">
+              <img
+                src={avatarSrc}
+                alt=""
+                className="h-full w-full object-contain"
+                onError={() => setAvatarSrc('/mascot/images/servo_base_image.png')}
+              />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Talk to Servo</h2>
+              <p className="text-[10px] text-emerald-700">Your table-side assistant</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -127,7 +139,8 @@ export default function ChatPanel({ restaurantId, tableKey, open, onClose, curre
         <div className="flex-1 overflow-y-auto px-4 py-3" ref={listRef}>
           {messages.length === 0 && (
             <p className="text-xs text-slate-500">
-              For example: &quot;What&apos;s vegan?&quot; or &quot;Any spicy mains without nuts?&quot;
+              Try: &quot;What&apos;s vegan?&quot;, &quot;Any spicy mains without nuts?&quot;, or
+              &quot;Build me a balanced meal for two&quot;.
             </p>
           )}
           <div className="space-y-2">
