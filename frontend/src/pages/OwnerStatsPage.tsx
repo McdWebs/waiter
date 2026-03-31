@@ -303,9 +303,10 @@ export default function OwnerStatsPage() {
                     tick={{ fontSize: 12, fill: '#64748b' }}
                   />
                   <Tooltip
-                    formatter={(value: number, name: string) => {
-                      if (name === 'Revenue') return [formatCurrency(value, currency), name]
-                      return [value, name]
+                    formatter={(value, name) => {
+                      const numericValue = typeof value === 'number' ? value : Number(value ?? 0)
+                      if (name === 'Revenue') return [formatCurrency(numericValue, currency), name]
+                      return [numericValue, name]
                     }}
                   />
                   <Area
@@ -382,7 +383,7 @@ export default function OwnerStatsPage() {
                     startAngle={180}
                     endAngle={0}
                   >
-                    <RadialBar background clockWise dataKey="value" cornerRadius={12} />
+                    <RadialBar background dataKey="value" cornerRadius={12} />
                   </RadialBarChart>
                 </ResponsiveContainer>
               </div>
