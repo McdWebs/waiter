@@ -7,6 +7,8 @@ import { BusinessPlan } from '../models/BusinessPlan'
 import { authenticateOwner } from '../middleware/auth'
 import multer from 'multer'
 import { uploadMenuItemImage, uploadRestaurantLogo } from '../services/s3Client'
+import { openai } from '../services/openaiClient'
+
 
 const router = express.Router()
 const upload = multer({
@@ -629,6 +631,127 @@ router.delete('/business-plans/:businessPlanId', authenticateOwner, async (req, 
     return res.status(500).json({ message: 'Failed to delete business plan' })
   }
 })
+
+// OCR: extract menu structure from an uploaded image or PDF using GPT-4o Vision
+const uploadMenuOcr = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB to accommodate PDFs
+})
+
+const OCR_PROMPT = `You are a menu extraction assistant. The user will send you one or more pages of a restaurant menu.
+Extract ALL menu items and return them as plain text in EXACTLY this format:
+
+Category Name
+Item Name — ₪Price
+Item Name — ₪Price
+
+Another Category
+Item Name — ₪Price
+
+Rules:
+- Use em-dash (—) between item name and price
+- Keep the currency symbol that appears in the menu (₪, $, €, £). If unclear, use ₪
+- If an item has no visible price, still include it with price 0 (e.g. "Fettuccine — ₪0")
+- If an item has multiple price variants (e.g. 1/3 = 29, 1/2 = 36), create one line per variant: "Peroni Draft Beer 1/3 — ₪29", "Peroni Draft Beer 1/2 — ₪36"
+- Item names may span multiple lines in the source — combine them into one line
+- Descriptions, ingredients, and notes (e.g. "Mozzarella, Tomato Sauce...") are NOT item names — ignore them
+- Topping lists that appear under a heading like "Toppings:" are separate items — list each option as its own item under a "Toppings" category
+- Ignore decorative characters, Hebrew text artifacts, page numbers, and restaurant branding
+- If multiple pages are provided, merge into one unified list with no page headers
+- Output ONLY the formatted menu text — no explanations, no markdown, no JSON`
+
+
+router.post(
+  '/restaurants/:restaurantId/menu/ocr-import',
+  authenticateOwner,
+  uploadMenuOcr.single('image'),
+  async (req, res) => {
+    try {
+      if (!openai.apiKey) {
+        return res.status(503).json({ message: 'OpenAI API key not configured' })
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' })
+      }
+
+      const ownerRestaurantId = (req as any).ownerRestaurantId as string | undefined
+      if (!ownerRestaurantId) {
+        return res.status(403).json({ message: 'Forbidden' })
+      }
+
+      const restaurantIdParam = String(req.params.restaurantId)
+      if (ownerRestaurantId !== restaurantIdParam) {
+        return res.status(403).json({ message: 'Forbidden' })
+      }
+
+      const mime = req.file.mimetype
+      const b64 = req.file.buffer.toString('base64')
+
+      type ImageMime = 'image/jpeg' | 'image/png' | 'image/webp'
+      const SUPPORTED_IMAGE_MIMES: ImageMime[] = ['image/jpeg', 'image/png', 'image/webp']
+      const isImage = (SUPPORTED_IMAGE_MIMES as string[]).includes(mime)
+      const isPdf = mime === 'application/pdf'
+
+      if (!isImage && !isPdf) {
+        return res.status(415).json({ message: 'Unsupported file type. Upload a JPEG, PNG, WEBP, or PDF.' })
+      }
+
+      // PDFs are sent as native file inputs via the Responses API.
+      // Images are sent as base64 data URLs via Chat Completions (Vision).
+      let extracted = ''
+
+      if (isPdf) {
+        // OpenAI Responses API supports PDF natively via input_file
+        const response = await openai.responses.create({
+          model: 'gpt-4o',
+          input: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_file',
+                  filename: req.file.originalname || 'menu.pdf',
+                  file_data: `data:application/pdf;base64,${b64}`,
+                },
+                {
+                  type: 'input_text',
+                  text: OCR_PROMPT,
+                },
+              ],
+            },
+          ],
+          max_output_tokens: 4096,
+        })
+        extracted = response.output_text?.trim() ?? ''
+      } else {
+        const response = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          max_tokens: 4096,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: OCR_PROMPT },
+                {
+                  type: 'image_url',
+                  image_url: { url: `data:${mime as ImageMime};base64,${b64}`, detail: 'high' },
+                },
+              ],
+            },
+          ],
+        })
+        extracted = response.choices[0]?.message?.content?.trim() ?? ''
+      }
+
+      return res.json({ text: extracted })
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err)
+      return res.status(500).json({ message: 'Failed to extract menu from file' })
+    }
+  }
+)
 
 router.patch('/categories/:categoryId', authenticateOwner, async (req, res) => {
   try {
