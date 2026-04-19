@@ -1,12 +1,12 @@
-import type { BusinessPlan } from '../../components/types'
-import type { AdminMenuResponse } from './types'
+import type { BusinessPlan } from "../../components/types";
+import type { AdminMenuResponse } from "./types";
 
 interface BusinessPlansPanelProps {
-  data: AdminMenuResponse
-  currencySymbol: string
-  planSaving: boolean
-  setEditingPlan: (plan: BusinessPlan | null) => void
-  deleteBusinessPlan: (planId: string) => Promise<void>
+  data: AdminMenuResponse;
+  currencySymbol: string;
+  planSaving: boolean;
+  setEditingPlan: (plan: BusinessPlan | null) => void;
+  deleteBusinessPlan: (planId: string) => Promise<void>;
 }
 
 export function BusinessPlansPanel({
@@ -24,7 +24,8 @@ export function BusinessPlansPanel({
             Business plans (עסקיות)
           </h2>
           <p className="mt-0.5 text-[11px] text-slate-500">
-            Fixed-price business meals: pick items from your menu. Guests see these at the top of the menu.
+            Fixed-price business meals: pick items from your menu. Guests see
+            these at the top of the menu.
           </p>
         </div>
         <button
@@ -33,10 +34,10 @@ export function BusinessPlansPanel({
           disabled={planSaving || !data.categories.length}
           onClick={() =>
             setEditingPlan({
-              _id: '',
-              name: 'עסקית',
-              description: '',
-              timeNote: '',
+              _id: "",
+              name: "עסקית",
+              description: "",
+              timeNote: "",
               price: 0,
               position: data.businessPlans?.length ?? 0,
               active: true,
@@ -49,7 +50,8 @@ export function BusinessPlansPanel({
       </div>
       {(!data.businessPlans || data.businessPlans.length === 0) && (
         <p className="text-[11px] text-slate-500">
-          No business plans yet. Click &ldquo;New business plan&rdquo; to add one.
+          No business plans yet. Click &ldquo;New business plan&rdquo; to add
+          one.
         </p>
       )}
       {data.businessPlans && data.businessPlans.length > 0 && (
@@ -80,7 +82,7 @@ export function BusinessPlansPanel({
                   </p>
                 )}
                 <p className="mt-0.5 text-[10px] text-slate-500">
-                  {plan.items.length} item{plan.items.length === 1 ? '' : 's'}
+                  {plan.items.length} item{plan.items.length === 1 ? "" : "s"}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1">
@@ -103,7 +105,7 @@ export function BusinessPlansPanel({
                     disabled={planSaving}
                     onClick={() => {
                       if (confirm(`Delete business plan "${plan.name}"?`)) {
-                        void deleteBusinessPlan(plan._id)
+                        void deleteBusinessPlan(plan._id);
                       }
                     }}
                   >
@@ -116,5 +118,5 @@ export function BusinessPlansPanel({
         </div>
       )}
     </section>
-  )
+  );
 }

@@ -1,32 +1,30 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useAuth } from '../components/AuthContext'
+import { useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../components/AuthContext";
 
 export default function OwnerDashboardLayout() {
-  const { restaurant, logout } = useAuth()
-  const navigate = useNavigate()
-  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { restaurant, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    setShowSignOutConfirm(false)
-    logout()
-    navigate('/owner/login', { replace: true })
-  }
+    setShowSignOutConfirm(false);
+    logout();
+    navigate("/owner/login", { replace: true });
+  };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation ${
       isActive
-        ? 'bg-white text-slate-900 shadow-sm'
-        : 'text-slate-500 hover:text-slate-800 hover:bg-white/60'
-    }`
+        ? "bg-white text-slate-900 shadow-sm"
+        : "text-slate-500 hover:text-slate-800 hover:bg-white/60"
+    }`;
 
   const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors touch-manipulation ${
-      isActive
-        ? 'bg-slate-900 text-white'
-        : 'text-slate-700 hover:bg-slate-100'
-    }`
+      isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+    }`;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -37,8 +35,12 @@ export default function OwnerDashboardLayout() {
             className="border-b border-amber-300 bg-amber-100 px-4 py-2.5 text-center text-xs font-medium text-amber-900"
             role="alert"
           >
-            Your restaurant is suspended — the public menu and new orders are disabled.{' '}
-            <span className="underline underline-offset-2">Contact support</span> if this is an error.
+            Your restaurant is suspended — the public menu and new orders are
+            disabled.{" "}
+            <span className="underline underline-offset-2">
+              Contact support
+            </span>{" "}
+            if this is an error.
           </div>
         )}
 
@@ -51,7 +53,9 @@ export default function OwnerDashboardLayout() {
                 {restaurant?.name && (
                   <>
                     <span className="mx-2 text-slate-300">·</span>
-                    <span className="truncate text-slate-900">{restaurant.name}</span>
+                    <span className="truncate text-slate-900">
+                      {restaurant.name}
+                    </span>
                   </>
                 )}
               </span>
@@ -60,10 +64,18 @@ export default function OwnerDashboardLayout() {
             {/* Desktop nav */}
             <div className="ml-auto hidden items-center gap-2 sm:flex">
               <nav className="flex items-center gap-0.5 rounded-lg bg-slate-100/80 p-0.5">
-                <NavLink to="/owner/menu" className={navLinkClass}>Menu</NavLink>
-                <NavLink to="/owner/stats" className={navLinkClass}>Stats</NavLink>
-                <NavLink to="/owner/settings" className={navLinkClass}>Settings</NavLink>
-                <NavLink to="/owner/feedback" className={navLinkClass}>Feedback</NavLink>
+                <NavLink to="/owner/menu" className={navLinkClass}>
+                  Menu
+                </NavLink>
+                <NavLink to="/owner/stats" className={navLinkClass}>
+                  Stats
+                </NavLink>
+                <NavLink to="/owner/settings" className={navLinkClass}>
+                  Settings
+                </NavLink>
+                <NavLink to="/owner/feedback" className={navLinkClass}>
+                  Feedback
+                </NavLink>
               </nav>
 
               {/* External links */}
@@ -76,8 +88,18 @@ export default function OwnerDashboardLayout() {
                     className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
                   >
                     Guest menu
-                    <svg className="h-3 w-3 opacity-50" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2 10L10 2M10 2H6M10 2v4" />
+                    <svg
+                      className="h-3 w-3 opacity-50"
+                      fill="none"
+                      viewBox="0 0 12 12"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2 10L10 2M10 2H6M10 2v4"
+                      />
                     </svg>
                   </a>
                 )}
@@ -109,12 +131,32 @@ export default function OwnerDashboardLayout() {
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l10 10M13 3L3 13" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 16 16"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 3l10 10M13 3L3 13"
+                  />
                 </svg>
               ) : (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2 4h12M2 8h12M2 12h12" />
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 16 16"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2 4h12M2 8h12M2 12h12"
+                  />
                 </svg>
               )}
             </button>
@@ -123,21 +165,39 @@ export default function OwnerDashboardLayout() {
           {/* Mobile drawer */}
           <div
             className={`overflow-hidden border-t border-slate-100 bg-white transition-all duration-200 ease-out sm:hidden ${
-              mobileMenuOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+              mobileMenuOpen
+                ? "max-h-80 opacity-100"
+                : "max-h-0 opacity-0 pointer-events-none"
             }`}
           >
             <div className="space-y-1 px-3 pb-3 pt-2">
               <nav className="space-y-0.5">
-                <NavLink to="/owner/menu" className={mobileNavLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <NavLink
+                  to="/owner/menu"
+                  className={mobileNavLinkClass}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Menu
                 </NavLink>
-                <NavLink to="/owner/stats" className={mobileNavLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <NavLink
+                  to="/owner/stats"
+                  className={mobileNavLinkClass}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Stats
                 </NavLink>
-                <NavLink to="/owner/settings" className={mobileNavLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <NavLink
+                  to="/owner/settings"
+                  className={mobileNavLinkClass}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Settings
                 </NavLink>
-                <NavLink to="/owner/feedback" className={mobileNavLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                <NavLink
+                  to="/owner/feedback"
+                  className={mobileNavLinkClass}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
                   Feedback
                 </NavLink>
               </nav>
@@ -152,8 +212,18 @@ export default function OwnerDashboardLayout() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <span>Guest menu</span>
-                    <svg className="h-3.5 w-3.5 opacity-40" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2 10L10 2M10 2H6M10 2v4" />
+                    <svg
+                      className="h-3.5 w-3.5 opacity-40"
+                      fill="none"
+                      viewBox="0 0 12 12"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2 10L10 2M10 2H6M10 2v4"
+                      />
                     </svg>
                   </a>
                 )}
@@ -162,8 +232,8 @@ export default function OwnerDashboardLayout() {
                     type="button"
                     className="flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
                     onClick={() => {
-                      setMobileMenuOpen(false)
-                      navigate(`/kitchen/${restaurant._id}`)
+                      setMobileMenuOpen(false);
+                      navigate(`/kitchen/${restaurant._id}`);
                     }}
                   >
                     Kitchen
@@ -173,8 +243,8 @@ export default function OwnerDashboardLayout() {
                   type="button"
                   className="flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
                   onClick={() => {
-                    setMobileMenuOpen(false)
-                    setShowSignOutConfirm(true)
+                    setMobileMenuOpen(false);
+                    setShowSignOutConfirm(true);
                   }}
                 >
                   Sign out
@@ -217,5 +287,5 @@ export default function OwnerDashboardLayout() {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

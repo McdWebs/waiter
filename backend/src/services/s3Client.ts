@@ -1,77 +1,82 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-import { randomUUID } from 'crypto'
-import sharp from 'sharp'
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { randomUUID } from "crypto";
+import sharp from "sharp";
 
 // Prefer the new generic bucket name, fall back to the legacy one if present
-const bucket = process.env.S3_BUCKET_NAME ?? process.env.S3_MENU_BUCKET
-const region = process.env.AWS_REGION
+const bucket = process.env.S3_BUCKET_NAME ?? process.env.S3_MENU_BUCKET;
+const region = process.env.AWS_REGION;
 
-const s3Configured = !!(bucket && region)
+const s3Configured = !!(bucket && region);
 
 if (!s3Configured) {
   // eslint-disable-next-line no-console
   console.warn(
-    'S3 is not fully configured for menu item images. Set S3_BUCKET_NAME (or S3_MENU_BUCKET) and AWS_REGION to enable uploads.'
-  )
+    "S3 is not fully configured for menu item images. Set S3_BUCKET_NAME (or S3_MENU_BUCKET) and AWS_REGION to enable uploads.",
+  );
 }
 
-const s3Config: any =
-  s3Configured
-    ? {
-        region,
-        credentials:
-          process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-            ? {
-                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-              }
-            : undefined,
-      }
-    : {}
+const s3Config: any = s3Configured
+  ? {
+      region,
+      credentials:
+        process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+          ? {
+              accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+              secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            }
+          : undefined,
+    }
+  : {};
 
-const s3 = s3Configured ? new S3Client(s3Config) : null
+const s3 = s3Configured ? new S3Client(s3Config) : null;
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 async function uploadImageToS3(
   file: Express.Multer.File,
-  keyPrefix: string
+  keyPrefix: string,
 ): Promise<string> {
   if (!s3Configured || !s3 || !bucket || !region) {
     throw new Error(
-      'Image storage is not configured. Please set S3_BUCKET_NAME (or S3_MENU_BUCKET), AWS_REGION, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY.'
-    )
+      "Image storage is not configured. Please set S3_BUCKET_NAME (or S3_MENU_BUCKET), AWS_REGION, AWS_ACCESS_KEY_ID, and AWS_SECRET_ACCESS_KEY.",
+    );
   }
 
   if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    throw new Error('Invalid image type. Please upload a JPG, PNG, or WEBP file.')
+    throw new Error(
+      "Invalid image type. Please upload a JPG, PNG, or WEBP file.",
+    );
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    throw new Error('Image is too large. Maximum size is 5MB.')
+    throw new Error("Image is too large. Maximum size is 5MB.");
   }
 
-  const extension = file.originalname.includes('.') ? file.originalname.split('.').pop() : undefined
-  const filename = `${randomUUID()}${extension ? `.${extension}` : ''}`
+  const extension = file.originalname.includes(".")
+    ? file.originalname.split(".").pop()
+    : undefined;
+  const filename = `${randomUUID()}${extension ? `.${extension}` : ""}`;
 
   // Compress and resize before upload while preserving the original format
-  let processedBuffer: Buffer
+  let processedBuffer: Buffer;
   const image = sharp(file.buffer).resize(1600, 1600, {
-    fit: 'inside',
+    fit: "inside",
     withoutEnlargement: true,
-  })
+  });
 
-  if (file.mimetype === 'image/jpeg') {
-    processedBuffer = await image.jpeg({ quality: 80 }).toBuffer()
-  } else if (file.mimetype === 'image/png') {
-    processedBuffer = await image.png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer()
+  if (file.mimetype === "image/jpeg") {
+    processedBuffer = await image.jpeg({ quality: 80 }).toBuffer();
+  } else if (file.mimetype === "image/png") {
+    processedBuffer = await image
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
+      .toBuffer();
   } else {
     // image/webp or any other allowed type
-    processedBuffer = await image.webp({ quality: 80 }).toBuffer()
+    processedBuffer = await image.webp({ quality: 80 }).toBuffer();
   }
 
-  const key = `${keyPrefix.replace(/\/+$/, '')}/${filename}`
+  const key = `${keyPrefix.replace(/\/+$/, "")}/${filename}`;
 
   await s3.send(
     new PutObjectCommand({
@@ -79,20 +84,22 @@ async function uploadImageToS3(
       Key: key,
       Body: processedBuffer,
       ContentType: file.mimetype,
-    })
-  )
+    }),
+  );
 
   // Public, direct S3 URL
-  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`
+  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 }
 
-export async function uploadMenuItemImage(file: Express.Multer.File): Promise<string> {
-  return uploadImageToS3(file, 'menu-items')
+export async function uploadMenuItemImage(
+  file: Express.Multer.File,
+): Promise<string> {
+  return uploadImageToS3(file, "menu-items");
 }
 
-export async function uploadRestaurantLogo(file: Express.Multer.File): Promise<string> {
+export async function uploadRestaurantLogo(
+  file: Express.Multer.File,
+): Promise<string> {
   // Logos are typically smaller; reuse the same limits and processing, but with a different key prefix.
-  return uploadImageToS3(file, 'restaurant-logos')
+  return uploadImageToS3(file, "restaurant-logos");
 }
-
-

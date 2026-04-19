@@ -1,82 +1,99 @@
-import express from 'express'
-import { Types } from 'mongoose'
-import { Order } from '../models/Order'
-import { OrderItem } from '../models/OrderItem'
-import { MenuItem } from '../models/MenuItem'
-import { Restaurant } from '../models/Restaurant'
-import { WaiterCall } from '../models/WaiterCall'
-import { io } from '../server'
+import express from "express";
+import { Types } from "mongoose";
+import { Order } from "../models/Order";
+import { OrderItem } from "../models/OrderItem";
+import { MenuItem } from "../models/MenuItem";
+import { Restaurant } from "../models/Restaurant";
+import { WaiterCall } from "../models/WaiterCall";
+import { io } from "../server";
 
-const router = express.Router()
+const router = express.Router();
 
-router.post('/orders', async (req, res) => {
+router.post("/orders", async (req, res) => {
   try {
-    const { restaurantId, tableNumber, waiterName, items, notes } = req.body as {
-      restaurantId?: string
-      tableNumber?: string
-      waiterName?: string
-      notes?: string
-      items?: { menuItemId?: string; quantity?: number; notes?: string }[]
-    }
+    const { restaurantId, tableNumber, waiterName, items, notes } =
+      req.body as {
+        restaurantId?: string;
+        tableNumber?: string;
+        waiterName?: string;
+        notes?: string;
+        items?: { menuItemId?: string; quantity?: number; notes?: string }[];
+      };
 
     if (!restaurantId || !Types.ObjectId.isValid(restaurantId)) {
-      return res.status(400).json({ message: 'Invalid restaurantId' })
+      return res.status(400).json({ message: "Invalid restaurantId" });
     }
 
     const restaurant = await Restaurant.findById(restaurantId)
       .select({ isSuspended: 1, allowOrders: 1, timezone: 1 })
-      .lean()
+      .lean();
     if (!restaurant || restaurant.isSuspended) {
-      return res.status(404).json({ message: 'Restaurant not found' })
+      return res.status(404).json({ message: "Restaurant not found" });
     }
     if (restaurant.allowOrders === false) {
-      return res.status(503).json({ message: 'This restaurant is not accepting orders right now' })
+      return res
+        .status(503)
+        .json({ message: "This restaurant is not accepting orders right now" });
     }
 
     if (!items || items.length === 0) {
-      return res.status(400).json({ message: 'Order must contain at least one item' })
+      return res
+        .status(400)
+        .json({ message: "Order must contain at least one item" });
     }
 
     // Ensure all items are currently available
     const menuItemIds = items
       .map((i) => i.menuItemId)
-      .filter((id): id is string => typeof id === 'string' && Types.ObjectId.isValid(id))
+      .filter(
+        (id): id is string =>
+          typeof id === "string" && Types.ObjectId.isValid(id),
+      );
 
     if (menuItemIds.length === 0) {
-      return res.status(400).json({ message: 'Order must contain at least one valid item' })
+      return res
+        .status(400)
+        .json({ message: "Order must contain at least one valid item" });
     }
 
     const menuItems = await MenuItem.find({ _id: { $in: menuItemIds } })
       .select({ _id: 1, available: 1, name: 1, price: 1 })
-      .lean()
+      .lean();
 
-    const unavailableNames: string[] = []
-    const menuItemMap = new Map<string, { available: boolean | undefined; price: number; name: string }>()
+    const unavailableNames: string[] = [];
+    const menuItemMap = new Map<
+      string,
+      { available: boolean | undefined; price: number; name: string }
+    >();
     for (const mi of menuItems) {
-      menuItemMap.set(mi._id.toString(), { available: mi.available, price: mi.price, name: mi.name })
+      menuItemMap.set(mi._id.toString(), {
+        available: mi.available,
+        price: mi.price,
+        name: mi.name,
+      });
       if (mi.available === false) {
-        unavailableNames.push(mi.name)
+        unavailableNames.push(mi.name);
       }
     }
 
     if (unavailableNames.length > 0) {
       return res.status(400).json({
-        message: 'Some items are currently unavailable',
+        message: "Some items are currently unavailable",
         unavailableItems: unavailableNames,
-      })
+      });
     }
 
     const order = await Order.create({
       restaurantId: new Types.ObjectId(restaurantId),
-      status: 'new',
+      status: "new",
       ...(tableNumber ? { tableNumber } : {}),
       ...(waiterName ? { waiterName: waiterName.trim() } : {}),
       ...(notes ? { notes } : {}),
-    })
+    });
 
     const orderItems = await OrderItem.insertMany(
       items.map((item) => {
-        const menuItem = menuItemMap.get(item.menuItemId ?? '')
+        const menuItem = menuItemMap.get(item.menuItemId ?? "");
         return {
           orderId: order._id,
           menuItemId: item.menuItemId,
@@ -85,14 +102,16 @@ router.post('/orders', async (req, res) => {
           // Snapshot price and name so historical data stays accurate even if
           // the menu item is edited or deleted later.
           priceAtOrder: menuItem?.price ?? 0,
-          nameAtOrder: menuItem?.name ?? '',
-        }
-      })
-    )
+          nameAtOrder: menuItem?.name ?? "",
+        };
+      }),
+    );
 
-    const populatedItems = await OrderItem.find({ _id: { $in: orderItems.map((i) => i._id) } })
-      .populate('menuItemId')
-      .lean()
+    const populatedItems = await OrderItem.find({
+      _id: { $in: orderItems.map((i) => i._id) },
+    })
+      .populate("menuItemId")
+      .lean();
 
     const payload = {
       _id: order._id,
@@ -108,63 +127,65 @@ router.post('/orders', async (req, res) => {
         notes: oi.notes ?? undefined,
         menuItem: oi.menuItemId,
       })),
-    }
+    };
 
-    io.to(restaurantId.toString()).emit('order:new', payload)
+    io.to(restaurantId.toString()).emit("order:new", payload);
 
-    return res.status(201).json({ orderId: order._id, status: order.status })
+    return res.status(201).json({ orderId: order._id, status: order.status });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to create order' })
+    console.error(err);
+    return res.status(500).json({ message: "Failed to create order" });
   }
-})
+});
 
-router.get('/restaurants/:restaurantId/orders', async (req, res) => {
+router.get("/restaurants/:restaurantId/orders", async (req, res) => {
   try {
-    const { restaurantId } = req.params
+    const { restaurantId } = req.params;
     const { status, tableNumber, from, to, includeClosed } = req.query as {
-      status?: string
-      tableNumber?: string
-      from?: string
-      to?: string
-      includeClosed?: string
-    }
+      status?: string;
+      tableNumber?: string;
+      from?: string;
+      to?: string;
+      includeClosed?: string;
+    };
 
     if (!Types.ObjectId.isValid(restaurantId)) {
-      return res.status(400).json({ message: 'Invalid restaurantId' })
+      return res.status(400).json({ message: "Invalid restaurantId" });
     }
 
-    const match: Record<string, unknown> = { restaurantId: new Types.ObjectId(restaurantId) }
-    if (status && ['new', 'preparing', 'ready'].includes(status)) {
-      match.status = status
+    const match: Record<string, unknown> = {
+      restaurantId: new Types.ObjectId(restaurantId),
+    };
+    if (status && ["new", "preparing", "ready"].includes(status)) {
+      match.status = status;
     }
     if (tableNumber) {
-      match.tableNumber = tableNumber
+      match.tableNumber = tableNumber;
     }
     if (from || to) {
-      const createdAt: Record<string, Date> = {}
+      const createdAt: Record<string, Date> = {};
       if (from && !Number.isNaN(Date.parse(from))) {
-        createdAt.$gte = new Date(from)
+        createdAt.$gte = new Date(from);
       }
       if (to && !Number.isNaN(Date.parse(to))) {
-        createdAt.$lte = new Date(to)
+        createdAt.$lte = new Date(to);
       }
       if (Object.keys(createdAt).length > 0) {
-        match.createdAt = createdAt
+        match.createdAt = createdAt;
       }
     }
 
-    if (!includeClosed || includeClosed !== 'true') {
-      match.closedAt = { $exists: false }
+    if (!includeClosed || includeClosed !== "true") {
+      match.closedAt = { $exists: false };
     }
 
-    const orders = await Order.find(match).sort({ createdAt: -1 }).lean()
-    const orderIds = orders.map((o) => o._id)
+    const orders = await Order.find(match).sort({ createdAt: -1 }).lean();
+    const orderIds = orders.map((o) => o._id);
 
     const orderItems = await OrderItem.find({ orderId: { $in: orderIds } })
-      .populate('menuItemId')
-      .lean()
+      .populate("menuItemId")
+      .lean();
 
     const ordersWithItems = orders.map((order) => ({
       ...order,
@@ -176,122 +197,130 @@ router.get('/restaurants/:restaurantId/orders', async (req, res) => {
           notes: oi.notes,
           menuItem: oi.menuItemId,
         })),
-    }))
+    }));
 
-    return res.json(ordersWithItems)
+    return res.json(ordersWithItems);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to load orders' })
+    console.error(err);
+    return res.status(500).json({ message: "Failed to load orders" });
   }
-})
+});
 
-router.delete('/restaurants/:restaurantId/orders', async (req, res) => {
+router.delete("/restaurants/:restaurantId/orders", async (req, res) => {
   try {
-    const { restaurantId } = req.params
-    const { tableNumber } = req.query as { tableNumber?: string }
+    const { restaurantId } = req.params;
+    const { tableNumber } = req.query as { tableNumber?: string };
 
     if (!Types.ObjectId.isValid(restaurantId)) {
-      return res.status(400).json({ message: 'Invalid restaurantId' })
+      return res.status(400).json({ message: "Invalid restaurantId" });
     }
 
     const match: Record<string, unknown> = {
       restaurantId: new Types.ObjectId(restaurantId),
-    }
+    };
 
     if (tableNumber) {
-      match.tableNumber = tableNumber
+      match.tableNumber = tableNumber;
     } else {
-      match.tableNumber = { $exists: false }
+      match.tableNumber = { $exists: false };
     }
 
-    const result = await Order.updateMany(match, { $set: { closedAt: new Date() } })
+    const result = await Order.updateMany(match, {
+      $set: { closedAt: new Date() },
+    });
 
-    return res.json({ closedOrders: result.modifiedCount ?? 0 })
+    return res.json({ closedOrders: result.modifiedCount ?? 0 });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to clear table' })
+    console.error(err);
+    return res.status(500).json({ message: "Failed to clear table" });
   }
-})
+});
 
-router.patch('/restaurants/:restaurantId/orders/waiter-name', async (req, res) => {
-  try {
-    const { restaurantId } = req.params
-    const { tableNumber, waiterName } = req.body as { tableNumber?: string; waiterName?: string }
+router.patch(
+  "/restaurants/:restaurantId/orders/waiter-name",
+  async (req, res) => {
+    try {
+      const { restaurantId } = req.params;
+      const { tableNumber, waiterName } = req.body as {
+        tableNumber?: string;
+        waiterName?: string;
+      };
 
-    if (!Types.ObjectId.isValid(restaurantId)) {
-      return res.status(400).json({ message: 'Invalid restaurantId' })
-    }
-
-    const normalizedTable = tableNumber?.trim()
-    if (!normalizedTable) {
-      return res.status(400).json({ message: 'Table number is required' })
-    }
-
-    const normalizedWaiterName = waiterName?.trim() ?? ''
-
-    const result = await Order.updateMany(
-      {
-        restaurantId: new Types.ObjectId(restaurantId),
-        tableNumber: normalizedTable,
-        closedAt: { $exists: false },
-      },
-      {
-        ...(normalizedWaiterName
-          ? { $set: { waiterName: normalizedWaiterName } }
-          : { $unset: { waiterName: 1 } }),
+      if (!Types.ObjectId.isValid(restaurantId)) {
+        return res.status(400).json({ message: "Invalid restaurantId" });
       }
-    )
 
-    return res.json({ updatedOrders: result.modifiedCount ?? 0 })
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to update waiter name' })
-  }
-})
+      const normalizedTable = tableNumber?.trim();
+      if (!normalizedTable) {
+        return res.status(400).json({ message: "Table number is required" });
+      }
 
-router.post('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
-  try {
-    const { restaurantId } = req.params
-    const { tableNumber, notes, type } = req.body as {
-      tableNumber?: string
-      notes?: string
-      type?: 'waiter' | 'checkout'
+      const normalizedWaiterName = waiterName?.trim() ?? "";
+
+      const result = await Order.updateMany(
+        {
+          restaurantId: new Types.ObjectId(restaurantId),
+          tableNumber: normalizedTable,
+          closedAt: { $exists: false },
+        },
+        {
+          ...(normalizedWaiterName
+            ? { $set: { waiterName: normalizedWaiterName } }
+            : { $unset: { waiterName: 1 } }),
+        },
+      );
+
+      return res.json({ updatedOrders: result.modifiedCount ?? 0 });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      return res.status(500).json({ message: "Failed to update waiter name" });
     }
+  },
+);
+
+router.post("/restaurants/:restaurantId/waiter-calls", async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const { tableNumber, notes, type } = req.body as {
+      tableNumber?: string;
+      notes?: string;
+      type?: "waiter" | "checkout";
+    };
 
     if (!Types.ObjectId.isValid(restaurantId)) {
-      return res.status(400).json({ message: 'Invalid restaurantId' })
+      return res.status(400).json({ message: "Invalid restaurantId" });
     }
-    const requestType = type ?? 'waiter'
-    if (!['waiter', 'checkout'].includes(requestType)) {
-      return res.status(400).json({ message: 'Invalid waiter call type' })
+    const requestType = type ?? "waiter";
+    if (!["waiter", "checkout"].includes(requestType)) {
+      return res.status(400).json({ message: "Invalid waiter call type" });
     }
 
     const match: Record<string, unknown> = {
       restaurantId: new Types.ObjectId(restaurantId),
-      status: 'open',
+      status: "open",
       type: requestType,
-    }
+    };
     if (tableNumber) {
-      match.tableNumber = tableNumber
+      match.tableNumber = tableNumber;
     } else {
-      match.tableNumber = { $exists: false }
+      match.tableNumber = { $exists: false };
     }
 
-    const existing = await WaiterCall.findOne(match).lean()
+    const existing = await WaiterCall.findOne(match).lean();
     if (existing) {
       const existingPayload = {
         _id: existing._id,
         restaurantId: existing.restaurantId,
         tableNumber: existing.tableNumber,
         notes: existing.notes,
-        type: existing.type ?? 'waiter',
+        type: existing.type ?? "waiter",
         status: existing.status,
         createdAt: existing.createdAt,
-      }
-      return res.status(200).json(existingPayload)
+      };
+      return res.status(200).json(existingPayload);
     }
 
     const call = await WaiterCall.create({
@@ -299,43 +328,43 @@ router.post('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
       ...(tableNumber ? { tableNumber } : {}),
       ...(notes ? { notes } : {}),
       type: requestType,
-      status: 'open',
-    })
+      status: "open",
+    });
 
     const payload = {
       _id: call._id,
       restaurantId: call.restaurantId,
       tableNumber: call.tableNumber,
       notes: call.notes,
-      type: call.type ?? 'waiter',
+      type: call.type ?? "waiter",
       status: call.status,
       createdAt: call.createdAt,
-    }
+    };
 
-    io.to(restaurantId.toString()).emit('waiter:call', payload)
+    io.to(restaurantId.toString()).emit("waiter:call", payload);
 
-    return res.status(201).json(payload)
+    return res.status(201).json(payload);
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to call waiter' })
+    console.error(err);
+    return res.status(500).json({ message: "Failed to call waiter" });
   }
-})
+});
 
-router.get('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
+router.get("/restaurants/:restaurantId/waiter-calls", async (req, res) => {
   try {
-    const { restaurantId } = req.params
+    const { restaurantId } = req.params;
 
     if (!Types.ObjectId.isValid(restaurantId)) {
-      return res.status(400).json({ message: 'Invalid restaurantId' })
+      return res.status(400).json({ message: "Invalid restaurantId" });
     }
 
     const calls = await WaiterCall.find({
       restaurantId: new Types.ObjectId(restaurantId),
-      status: 'open',
+      status: "open",
     })
       .sort({ createdAt: -1 })
-      .lean()
+      .lean();
 
     return res.json(
       calls.map((call) => ({
@@ -343,77 +372,82 @@ router.get('/restaurants/:restaurantId/waiter-calls', async (req, res) => {
         restaurantId: call.restaurantId,
         tableNumber: call.tableNumber,
         notes: call.notes,
-        type: call.type ?? 'waiter',
+        type: call.type ?? "waiter",
         status: call.status,
         createdAt: call.createdAt,
-      }))
-    )
+      })),
+    );
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to load waiter calls' })
+    console.error(err);
+    return res.status(500).json({ message: "Failed to load waiter calls" });
   }
-})
+});
 
-router.patch('/waiter-calls/:callId/handled', async (req, res) => {
+router.patch("/waiter-calls/:callId/handled", async (req, res) => {
   try {
-    const { callId } = req.params
+    const { callId } = req.params;
 
     if (!Types.ObjectId.isValid(callId)) {
-      return res.status(400).json({ message: 'Invalid callId' })
+      return res.status(400).json({ message: "Invalid callId" });
     }
 
     const call = await WaiterCall.findByIdAndUpdate(
       callId,
-      { status: 'handled', handledAt: new Date() },
-      { returnDocument: 'after' }
-    ).lean()
+      { status: "handled", handledAt: new Date() },
+      { returnDocument: "after" },
+    ).lean();
 
     if (!call) {
-      return res.status(404).json({ message: 'Waiter call not found' })
+      return res.status(404).json({ message: "Waiter call not found" });
     }
 
-    io.to(call.restaurantId.toString()).emit('waiter:call:handled', {
+    io.to(call.restaurantId.toString()).emit("waiter:call:handled", {
       callId: call._id,
-    })
+    });
 
-    return res.json({ callId: call._id, status: call.status })
+    return res.json({ callId: call._id, status: call.status });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to mark waiter call as handled' })
+    console.error(err);
+    return res
+      .status(500)
+      .json({ message: "Failed to mark waiter call as handled" });
   }
-})
+});
 
-router.patch('/orders/:orderId/status', async (req, res) => {
+router.patch("/orders/:orderId/status", async (req, res) => {
   try {
-    const { orderId } = req.params
-    const { status } = req.body as { status?: string }
+    const { orderId } = req.params;
+    const { status } = req.body as { status?: string };
 
     if (!Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: 'Invalid orderId' })
+      return res.status(400).json({ message: "Invalid orderId" });
     }
-    if (!status || !['new', 'preparing', 'ready'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' })
+    if (!status || !["new", "preparing", "ready"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
     }
 
-    const order = await Order.findByIdAndUpdate(orderId, { status }, { returnDocument: 'after' }).lean()
+    const order = await Order.findByIdAndUpdate(
+      orderId,
+      { status },
+      { returnDocument: "after" },
+    ).lean();
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' })
+      return res.status(404).json({ message: "Order not found" });
     }
 
-    io.to(order.restaurantId.toString()).emit('order:updated', {
+    io.to(order.restaurantId.toString()).emit("order:updated", {
       orderId: order._id,
       status: order.status,
-    })
+    });
 
-    return res.json({ orderId: order._id, status: order.status })
+    return res.json({ orderId: order._id, status: order.status });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error(err)
-    return res.status(500).json({ message: 'Failed to update order status' })
+    console.error(err);
+    return res.status(500).json({ message: "Failed to update order status" });
   }
-})
+});
 
-export default router
-
+export default router;

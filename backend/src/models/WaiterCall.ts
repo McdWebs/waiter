@@ -1,33 +1,39 @@
-import { Schema, model, type Document, type Types } from 'mongoose'
+import { Schema, model, type Document, type Types } from "mongoose";
 
-export type WaiterCallStatus = 'open' | 'handled'
-export type WaiterCallType = 'waiter' | 'checkout'
+export type WaiterCallStatus = "open" | "handled";
+export type WaiterCallType = "waiter" | "checkout";
 
 export interface WaiterCallDocument extends Document {
-  restaurantId: Types.ObjectId
-  tableNumber?: string
-  notes?: string
-  type: WaiterCallType
-  status: WaiterCallStatus
-  createdAt: Date
-  updatedAt: Date
-  handledAt?: Date
+  restaurantId: Types.ObjectId;
+  tableNumber?: string;
+  notes?: string;
+  type: WaiterCallType;
+  status: WaiterCallStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  handledAt?: Date;
 }
 
 const waiterCallSchema = new Schema<WaiterCallDocument>(
   {
-    restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
+    restaurantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: true,
+    },
     tableNumber: { type: String },
     notes: { type: String },
-    type: { type: String, enum: ['waiter', 'checkout'], default: 'waiter' },
-    status: { type: String, enum: ['open', 'handled'], default: 'open' },
+    type: { type: String, enum: ["waiter", "checkout"], default: "waiter" },
+    status: { type: String, enum: ["open", "handled"], default: "open" },
     handledAt: { type: Date },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
-waiterCallSchema.index({ restaurantId: 1, status: 1 })
-waiterCallSchema.index({ status: 1, handledAt: 1 })
+waiterCallSchema.index({ restaurantId: 1, status: 1 });
+waiterCallSchema.index({ status: 1, handledAt: 1 });
 
-export const WaiterCall = model<WaiterCallDocument>('WaiterCall', waiterCallSchema)
-
+export const WaiterCall = model<WaiterCallDocument>(
+  "WaiterCall",
+  waiterCallSchema,
+);

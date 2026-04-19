@@ -1,12 +1,12 @@
-import { DEFAULT_ALLERGENS, DEFAULT_TAGS } from './constants'
+import { DEFAULT_ALLERGENS, DEFAULT_TAGS } from "./constants";
 
 interface AddItemModalProps {
-  categoryName: string
-  saving: boolean
-  newItemImagePreview: string | null
-  setNewItemImagePreview: (v: string | null) => void
-  onClose: () => void
-  onSubmit: (formData: FormData) => Promise<void>
+  categoryName: string;
+  saving: boolean;
+  newItemImagePreview: string | null;
+  setNewItemImagePreview: (v: string | null) => void;
+  onClose: () => void;
+  onSubmit: (formData: FormData) => Promise<void>;
 }
 
 export function AddItemModal({
@@ -22,21 +22,21 @@ export function AddItemModal({
       <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl my-4 sm:my-0 max-h-[90vh] overflow-y-auto">
         <h2 className="text-sm font-semibold text-slate-900">Add item</h2>
         <p className="mt-1 text-[11px] text-slate-600">
-          Create a new menu item in{' '}
+          Create a new menu item in{" "}
           <span className="font-semibold">{categoryName}</span>.
         </p>
         <form
           className="mt-3 space-y-2 text-xs"
           onSubmit={(e) => {
-            e.preventDefault()
-            const form = e.currentTarget
-            const formData = new FormData(form)
+            e.preventDefault();
+            const form = e.currentTarget;
+            const formData = new FormData(form);
             if (!newItemImagePreview) {
-              formData.delete('image')
+              formData.delete("image");
             }
             void (async () => {
-              await onSubmit(formData)
-            })()
+              await onSubmit(formData);
+            })();
           }}
         >
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -142,12 +142,12 @@ export function AddItemModal({
                   accept="image/*"
                   className="hidden"
                   onChange={(e) => {
-                    const file = e.target.files?.[0]
+                    const file = e.target.files?.[0];
                     if (file) {
-                      const url = URL.createObjectURL(file)
-                      setNewItemImagePreview(url)
+                      const url = URL.createObjectURL(file);
+                      setNewItemImagePreview(url);
                     } else {
-                      setNewItemImagePreview(null)
+                      setNewItemImagePreview(null);
                     }
                   }}
                 />
@@ -165,7 +165,7 @@ export function AddItemModal({
                     type="button"
                     className="text-[11px] font-medium text-rose-600 hover:text-rose-700"
                     onClick={() => {
-                      setNewItemImagePreview(null)
+                      setNewItemImagePreview(null);
                     }}
                   >
                     Remove image
@@ -194,5 +194,5 @@ export function AddItemModal({
         </form>
       </div>
     </div>
-  )
+  );
 }

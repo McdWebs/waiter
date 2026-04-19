@@ -7,16 +7,18 @@
  * Copy the output into your .env as:
  *   SUPER_ADMIN_PASSWORD=$2b$12$...
  */
-import bcrypt from 'bcrypt'
+import bcrypt from "bcrypt";
 
-const password = process.argv[2]
+const password = process.argv[2];
 if (!password) {
-  console.error('Usage: npx ts-node src/scripts/hashPassword.ts <password>')
-  process.exit(1)
+  console.error("Usage: npx ts-node src/scripts/hashPassword.ts <password>");
+  process.exit(1);
 }
 
 bcrypt.hash(password, 12).then((hash) => {
-  console.log('\nBcrypt hash (copy this into SUPER_ADMIN_PASSWORD in your .env):\n')
-  console.log(hash)
-  console.log()
-})
+  console.log(
+    "\nBcrypt hash (copy this into SUPER_ADMIN_PASSWORD in your .env):\n",
+  );
+  console.log(hash);
+  console.log();
+});

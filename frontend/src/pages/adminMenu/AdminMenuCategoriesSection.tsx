@@ -1,32 +1,38 @@
-import type { Dispatch, SetStateAction } from 'react'
-import type { MenuCategory, MenuItem } from '../../components/types'
-import type { AdminMenuResponse, PendingDelete } from './types'
+import type { Dispatch, SetStateAction } from "react";
+import type { MenuCategory, MenuItem } from "../../components/types";
+import type { AdminMenuResponse, PendingDelete } from "./types";
 
 interface AdminMenuCategoriesSectionProps {
-  data: AdminMenuResponse
-  setData: Dispatch<SetStateAction<AdminMenuResponse | null>>
-  saving: boolean
-  collapsedCategoryIds: string[]
-  dragCategoryIndex: number | null
-  setDragCategoryIndex: Dispatch<SetStateAction<number | null>>
-  dragItemState: { categoryId: string; index: number } | null
-  setDragItemState: Dispatch<SetStateAction<{ categoryId: string; index: number } | null>>
-  editingCategoryId: string | null
-  editingCategoryName: string
-  setEditingCategoryId: (id: string | null) => void
-  setEditingCategoryName: (name: string) => void
-  openActionsItemId: string | null
-  setOpenActionsItemId: Dispatch<SetStateAction<string | null>>
-  currencySymbol: string
-  reorderCategories: (categories: MenuCategory[]) => Promise<void>
-  reorderItems: (categoryId: string, items: MenuItem[]) => Promise<void>
-  updateCategoryName: (categoryId: string, name: string) => Promise<void>
-  handleAutoScroll: (clientY: number) => void
-  toggleCategoryCollapsed: (categoryId: string) => void
-  setAddingItemForCategory: (v: { _id: string; name: string } | null) => void
-  setPendingDelete: (v: PendingDelete | null) => void
-  setEditingItem: (v: { item: MenuItem; categoryId: string } | null) => void
-  patchItemAvailable: (itemId: string, categoryId: string, next: boolean) => Promise<void>
+  data: AdminMenuResponse;
+  setData: Dispatch<SetStateAction<AdminMenuResponse | null>>;
+  saving: boolean;
+  collapsedCategoryIds: string[];
+  dragCategoryIndex: number | null;
+  setDragCategoryIndex: Dispatch<SetStateAction<number | null>>;
+  dragItemState: { categoryId: string; index: number } | null;
+  setDragItemState: Dispatch<
+    SetStateAction<{ categoryId: string; index: number } | null>
+  >;
+  editingCategoryId: string | null;
+  editingCategoryName: string;
+  setEditingCategoryId: (id: string | null) => void;
+  setEditingCategoryName: (name: string) => void;
+  openActionsItemId: string | null;
+  setOpenActionsItemId: Dispatch<SetStateAction<string | null>>;
+  currencySymbol: string;
+  reorderCategories: (categories: MenuCategory[]) => Promise<void>;
+  reorderItems: (categoryId: string, items: MenuItem[]) => Promise<void>;
+  updateCategoryName: (categoryId: string, name: string) => Promise<void>;
+  handleAutoScroll: (clientY: number) => void;
+  toggleCategoryCollapsed: (categoryId: string) => void;
+  setAddingItemForCategory: (v: { _id: string; name: string } | null) => void;
+  setPendingDelete: (v: PendingDelete | null) => void;
+  setEditingItem: (v: { item: MenuItem; categoryId: string } | null) => void;
+  patchItemAvailable: (
+    itemId: string,
+    categoryId: string,
+    next: boolean,
+  ) => Promise<void>;
 }
 
 export function AdminMenuCategoriesSection({
@@ -58,45 +64,47 @@ export function AdminMenuCategoriesSection({
   return (
     <section className="space-y-6">
       {data.categories.length === 0 && (
-        <p className="text-xs text-slate-500">No categories yet. Add one above.</p>
+        <p className="text-xs text-slate-500">
+          No categories yet. Add one above.
+        </p>
       )}
       {data.categories.map((category, catIndex) => {
-        const isCollapsed = collapsedCategoryIds.includes(category._id)
+        const isCollapsed = collapsedCategoryIds.includes(category._id);
         return (
           <div
             key={category._id}
             className={`group rounded-3xl border bg-white/95 p-4 shadow-sm ring-1 ring-transparent transition hover:border-emerald-200 hover:shadow-md hover:ring-emerald-50 sm:p-5 ${
               dragCategoryIndex === catIndex
-                ? 'border-emerald-400 ring-1 ring-emerald-300'
-                : 'border-slate-200'
+                ? "border-emerald-400 ring-1 ring-emerald-300"
+                : "border-slate-200"
             }`}
             draggable={editingCategoryId === category._id ? false : true}
             onDragStart={(e) => {
-              if (saving) return
-              e.dataTransfer.effectAllowed = 'move'
-              setDragCategoryIndex(catIndex)
+              if (saving) return;
+              e.dataTransfer.effectAllowed = "move";
+              setDragCategoryIndex(catIndex);
             }}
             onDragOver={(e) => {
-              if (dragCategoryIndex === null) return
-              e.preventDefault()
-              handleAutoScroll(e.clientY)
+              if (dragCategoryIndex === null) return;
+              e.preventDefault();
+              handleAutoScroll(e.clientY);
               if (dragCategoryIndex !== catIndex) {
                 setData((prev) => {
-                  if (!prev) return prev
-                  const categories = [...prev.categories]
-                  const moved = categories.splice(dragCategoryIndex, 1)[0]
-                  categories.splice(catIndex, 0, moved)
-                  return { ...prev, categories }
-                })
-                setDragCategoryIndex(catIndex)
+                  if (!prev) return prev;
+                  const categories = [...prev.categories];
+                  const moved = categories.splice(dragCategoryIndex, 1)[0];
+                  categories.splice(catIndex, 0, moved);
+                  return { ...prev, categories };
+                });
+                setDragCategoryIndex(catIndex);
               }
             }}
             onDrop={(e) => {
-              e.preventDefault()
+              e.preventDefault();
               if (dragCategoryIndex !== null && !saving && data) {
-                void reorderCategories(data.categories)
+                void reorderCategories(data.categories);
               }
-              setDragCategoryIndex(null)
+              setDragCategoryIndex(null);
             }}
             onDragEnd={() => setDragCategoryIndex(null)}
           >
@@ -116,10 +124,14 @@ export function AdminMenuCategoriesSection({
                       autoFocus
                       placeholder="Category name"
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') void updateCategoryName(category._id, editingCategoryName)
-                        if (e.key === 'Escape') {
-                          setEditingCategoryId(null)
-                          setEditingCategoryName('')
+                        if (e.key === "Enter")
+                          void updateCategoryName(
+                            category._id,
+                            editingCategoryName,
+                          );
+                        if (e.key === "Escape") {
+                          setEditingCategoryId(null);
+                          setEditingCategoryName("");
                         }
                       }}
                     />
@@ -127,7 +139,12 @@ export function AdminMenuCategoriesSection({
                       type="button"
                       className="flex-shrink-0 rounded-full bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
                       disabled={saving}
-                      onClick={() => void updateCategoryName(category._id, editingCategoryName)}
+                      onClick={() =>
+                        void updateCategoryName(
+                          category._id,
+                          editingCategoryName,
+                        )
+                      }
                     >
                       Save
                     </button>
@@ -135,8 +152,8 @@ export function AdminMenuCategoriesSection({
                       type="button"
                       className="flex-shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-600 hover:bg-slate-50"
                       onClick={() => {
-                        setEditingCategoryId(null)
-                        setEditingCategoryName('')
+                        setEditingCategoryId(null);
+                        setEditingCategoryName("");
                       }}
                     >
                       Cancel
@@ -153,18 +170,22 @@ export function AdminMenuCategoriesSection({
                 <div className="flex flex-shrink-0 items-center gap-1">
                   <button
                     type="button"
-                    title={isCollapsed ? 'Expand' : 'Collapse'}
+                    title={isCollapsed ? "Expand" : "Collapse"}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                     onClick={() => toggleCategoryCollapsed(category._id)}
                   >
                     <svg
-                      className={`h-4 w-4 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+                      className={`h-4 w-4 transition-transform duration-200 ${isCollapsed ? "-rotate-90" : ""}`}
                       fill="none"
                       viewBox="0 0 16 16"
                       stroke="currentColor"
                       strokeWidth={2}
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6l4 4 4-4" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 6l4 4 4-4"
+                      />
                     </svg>
                   </button>
 
@@ -174,12 +195,22 @@ export function AdminMenuCategoriesSection({
                     disabled={saving}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
                     onClick={() => {
-                      setEditingCategoryId(category._id)
-                      setEditingCategoryName(category.name)
+                      setEditingCategoryId(category._id);
+                      setEditingCategoryName(category.name);
                     }}
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" />
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 16 16"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z"
+                      />
                     </svg>
                   </button>
 
@@ -189,16 +220,28 @@ export function AdminMenuCategoriesSection({
                     disabled={catIndex === 0 || saving}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"
                     onClick={() => {
-                      if (saving || !data || catIndex === 0) return
-                      const categories = [...data.categories]
-                      const moved = categories.splice(catIndex, 1)[0]
-                      categories.splice(catIndex - 1, 0, moved)
-                      setData((prev) => (prev ? { ...prev, categories } : prev))
-                      void reorderCategories(categories)
+                      if (saving || !data || catIndex === 0) return;
+                      const categories = [...data.categories];
+                      const moved = categories.splice(catIndex, 1)[0];
+                      categories.splice(catIndex - 1, 0, moved);
+                      setData((prev) =>
+                        prev ? { ...prev, categories } : prev,
+                      );
+                      void reorderCategories(categories);
                     }}
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12V4M4 8l4-4 4 4" />
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 16 16"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8 12V4M4 8l4-4 4 4"
+                      />
                     </svg>
                   </button>
 
@@ -208,16 +251,33 @@ export function AdminMenuCategoriesSection({
                     disabled={catIndex === data.categories.length - 1 || saving}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"
                     onClick={() => {
-                      if (saving || !data || catIndex === data.categories.length - 1) return
-                      const categories = [...data.categories]
-                      const moved = categories.splice(catIndex, 1)[0]
-                      categories.splice(catIndex + 1, 0, moved)
-                      setData((prev) => (prev ? { ...prev, categories } : prev))
-                      void reorderCategories(categories)
+                      if (
+                        saving ||
+                        !data ||
+                        catIndex === data.categories.length - 1
+                      )
+                        return;
+                      const categories = [...data.categories];
+                      const moved = categories.splice(catIndex, 1)[0];
+                      categories.splice(catIndex + 1, 0, moved);
+                      setData((prev) =>
+                        prev ? { ...prev, categories } : prev,
+                      );
+                      void reorderCategories(categories);
                     }}
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 4v8m4-4l-4 4-4-4" />
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 16 16"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8 4v8m4-4l-4 4-4-4"
+                      />
                     </svg>
                   </button>
 
@@ -229,11 +289,24 @@ export function AdminMenuCategoriesSection({
                     disabled={saving}
                     className="flex h-8 items-center gap-1.5 rounded-full bg-emerald-600 px-3 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
                     onClick={() =>
-                      setAddingItemForCategory({ _id: category._id, name: category.name })
+                      setAddingItemForCategory({
+                        _id: category._id,
+                        name: category.name,
+                      })
                     }
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v10M3 8h10" />
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 16 16"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M8 3v10M3 8h10"
+                      />
                     </svg>
                     <span className="hidden sm:inline">Add item</span>
                   </button>
@@ -244,11 +317,25 @@ export function AdminMenuCategoriesSection({
                     disabled={saving}
                     className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
                     onClick={() =>
-                      setPendingDelete({ type: 'category', id: category._id, name: category.name })
+                      setPendingDelete({
+                        type: "category",
+                        id: category._id,
+                        name: category.name,
+                      })
                     }
                   >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 16 16" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h10M6 4V2h4v2M5 4v9a1 1 0 001 1h4a1 1 0 001-1V4" />
+                    <svg
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 16 16"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 4h10M6 4V2h4v2M5 4v9a1 1 0 001 1h4a1 1 0 001-1V4"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -259,8 +346,8 @@ export function AdminMenuCategoriesSection({
               <div
                 className={`overflow-hidden transform-gpu origin-top transition-all duration-200 ease-out ${
                   isCollapsed
-                    ? 'max-h-0 scale-y-95 opacity-0 pointer-events-none'
-                    : 'max-h-[1200px] scale-y-100 opacity-100'
+                    ? "max-h-0 scale-y-95 opacity-0 pointer-events-none"
+                    : "max-h-[1200px] scale-y-100 opacity-100"
                 }`}
               >
                 {category.items && category.items.length > 0 ? (
@@ -273,16 +360,19 @@ export function AdminMenuCategoriesSection({
                             dragItemState &&
                             dragItemState.categoryId === category._id &&
                             dragItemState.index === itemIndex
-                              ? 'ring-1 ring-emerald-300'
-                              : ''
-                          } ${item.available === false ? 'opacity-75' : ''} ${
-                            openActionsItemId === item._id ? 'z-20' : ''
+                              ? "ring-1 ring-emerald-300"
+                              : ""
+                          } ${item.available === false ? "opacity-75" : ""} ${
+                            openActionsItemId === item._id ? "z-20" : ""
                           }`}
                           draggable
                           onDragStart={(e) => {
-                            if (saving) return
-                            e.dataTransfer.effectAllowed = 'move'
-                            setDragItemState({ categoryId: category._id, index: itemIndex })
+                            if (saving) return;
+                            e.dataTransfer.effectAllowed = "move";
+                            setDragItemState({
+                              categoryId: category._id,
+                              index: itemIndex,
+                            });
                           }}
                           onDragOver={(e) => {
                             if (
@@ -290,38 +380,48 @@ export function AdminMenuCategoriesSection({
                               dragItemState.categoryId !== category._id ||
                               dragItemState.index === itemIndex
                             ) {
-                              return
+                              return;
                             }
-                            e.preventDefault()
-                            handleAutoScroll(e.clientY)
+                            e.preventDefault();
+                            handleAutoScroll(e.clientY);
                             setData((prev) => {
-                              if (!prev) return prev
+                              if (!prev) return prev;
                               const categories = prev.categories.map((cat) => {
-                                if (cat._id !== category._id || !cat.items) return cat
-                                const items = [...cat.items]
-                                const moved = items.splice(dragItemState.index, 1)[0]
-                                items.splice(itemIndex, 0, moved)
-                                return { ...cat, items }
-                              })
-                              return { ...prev, categories }
-                            })
-                            setDragItemState({ categoryId: category._id, index: itemIndex })
+                                if (cat._id !== category._id || !cat.items)
+                                  return cat;
+                                const items = [...cat.items];
+                                const moved = items.splice(
+                                  dragItemState.index,
+                                  1,
+                                )[0];
+                                items.splice(itemIndex, 0, moved);
+                                return { ...cat, items };
+                              });
+                              return { ...prev, categories };
+                            });
+                            setDragItemState({
+                              categoryId: category._id,
+                              index: itemIndex,
+                            });
                           }}
                           onDrop={(e) => {
-                            e.preventDefault()
+                            e.preventDefault();
                             if (
                               dragItemState &&
                               dragItemState.categoryId === category._id &&
                               !saving
                             ) {
                               const updatedCategory = data.categories.find(
-                                (c) => c._id === category._id
-                              )
+                                (c) => c._id === category._id,
+                              );
                               if (updatedCategory && updatedCategory.items) {
-                                void reorderItems(category._id, updatedCategory.items)
+                                void reorderItems(
+                                  category._id,
+                                  updatedCategory.items,
+                                );
                               }
                             }
-                            setDragItemState(null)
+                            setDragItemState(null);
                           }}
                           onDragEnd={() => setDragItemState(null)}
                         >
@@ -349,7 +449,8 @@ export function AdminMenuCategoriesSection({
                               </div>
                             </div>
                             <div className="flex flex-wrap gap-1">
-                              {(item.tags?.length ?? 0) > 0 || (item.allergens?.length ?? 0) > 0 ? (
+                              {(item.tags?.length ?? 0) > 0 ||
+                              (item.allergens?.length ?? 0) > 0 ? (
                                 <>
                                   {item.tags?.map((tag) => (
                                     <span
@@ -384,7 +485,7 @@ export function AdminMenuCategoriesSection({
                             <div
                               className="relative"
                               onClick={(e) => {
-                                e.stopPropagation()
+                                e.stopPropagation();
                               }}
                             >
                               <button
@@ -392,7 +493,7 @@ export function AdminMenuCategoriesSection({
                                 className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-medium text-slate-700 hover:bg-slate-50"
                                 onClick={() =>
                                   setOpenActionsItemId((prev) =>
-                                    prev === item._id ? null : item._id
+                                    prev === item._id ? null : item._id,
                                   )
                                 }
                               >
@@ -405,12 +506,18 @@ export function AdminMenuCategoriesSection({
                                     className="block w-full px-3 py-1.5 text-left text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                                     disabled={saving}
                                     onClick={() => {
-                                      if (saving) return
-                                      const next = !(item.available ?? true)
-                                      void patchItemAvailable(item._id, category._id, next)
+                                      if (saving) return;
+                                      const next = !(item.available ?? true);
+                                      void patchItemAvailable(
+                                        item._id,
+                                        category._id,
+                                        next,
+                                      );
                                     }}
                                   >
-                                    {item.available === false ? 'Mark available' : 'Mark unavailable'}
+                                    {item.available === false
+                                      ? "Mark available"
+                                      : "Mark unavailable"}
                                   </button>
                                   <button
                                     type="button"
@@ -420,8 +527,8 @@ export function AdminMenuCategoriesSection({
                                       setEditingItem({
                                         item,
                                         categoryId: category._id,
-                                      })
-                                      setOpenActionsItemId(null)
+                                      });
+                                      setOpenActionsItemId(null);
                                     }}
                                   >
                                     Edit
@@ -432,11 +539,11 @@ export function AdminMenuCategoriesSection({
                                     disabled={saving}
                                     onClick={() => {
                                       setPendingDelete({
-                                        type: 'item',
+                                        type: "item",
                                         id: item._id,
                                         name: item.name,
-                                      })
-                                      setOpenActionsItemId(null)
+                                      });
+                                      setOpenActionsItemId(null);
                                     }}
                                   >
                                     Delete
@@ -457,8 +564,8 @@ export function AdminMenuCategoriesSection({
               </div>
             </div>
           </div>
-        )
+        );
       })}
     </section>
-  )
+  );
 }

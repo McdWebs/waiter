@@ -1,1 +1,1 @@
-export { default } from './adminMenu/AdminMenuPage'
+export { default } from "./adminMenu/AdminMenuPage";

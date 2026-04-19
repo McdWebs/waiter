@@ -1,13 +1,13 @@
-import type { MenuItem } from '../../components/types'
-import { DEFAULT_ALLERGENS, DEFAULT_TAGS } from './constants'
+import type { MenuItem } from "../../components/types";
+import { DEFAULT_ALLERGENS, DEFAULT_TAGS } from "./constants";
 
 interface EditItemModalProps {
-  item: MenuItem
-  saving: boolean
-  editItemImagePreview: string | null
-  setEditItemImagePreview: (v: string | null) => void
-  onClose: () => void
-  onSubmit: (formData: FormData) => Promise<void>
+  item: MenuItem;
+  saving: boolean;
+  editItemImagePreview: string | null;
+  setEditItemImagePreview: (v: string | null) => void;
+  onClose: () => void;
+  onSubmit: (formData: FormData) => Promise<void>;
 }
 
 export function EditItemModal({
@@ -23,20 +23,21 @@ export function EditItemModal({
       <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-xl my-4 sm:my-0 max-h-[90vh] overflow-y-auto">
         <h2 className="text-sm font-semibold text-slate-900">Edit item</h2>
         <p className="mt-1 text-[11px] text-slate-600">
-          Update the details for <span className="font-semibold">{item.name}</span>.
+          Update the details for{" "}
+          <span className="font-semibold">{item.name}</span>.
         </p>
         <form
           className="mt-3 space-y-2 text-xs"
           onSubmit={(e) => {
-            e.preventDefault()
-            const form = e.currentTarget
-            const formData = new FormData(form)
+            e.preventDefault();
+            const form = e.currentTarget;
+            const formData = new FormData(form);
             if (!editItemImagePreview) {
-              formData.delete('image')
+              formData.delete("image");
             }
             void (async () => {
-              await onSubmit(formData)
-            })()
+              await onSubmit(formData);
+            })();
           }}
         >
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -91,7 +92,7 @@ export function EditItemModal({
                 name="allergensCustom"
                 defaultValue={item.allergens
                   .filter((a) => !DEFAULT_ALLERGENS.includes(a))
-                  .join(', ')}
+                  .join(", ")}
                 className="mt-1 w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
                 placeholder="Custom allergens (comma separated, optional)"
               />
@@ -121,7 +122,7 @@ export function EditItemModal({
                 name="tagsCustom"
                 defaultValue={item.tags
                   .filter((t) => !DEFAULT_TAGS.includes(t))
-                  .join(', ')}
+                  .join(", ")}
                 className="mt-1 w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none placeholder:text-slate-400"
                 placeholder="Custom tags (comma separated, optional)"
               />
@@ -136,7 +137,7 @@ export function EditItemModal({
                 </div>
                 <div className="flex flex-col">
                   <span className="font-medium text-slate-800 group-hover:text-emerald-800">
-                    {item.imageUrl ? 'Change image' : 'Upload image'}
+                    {item.imageUrl ? "Change image" : "Upload image"}
                   </span>
                   <span className="text-[10px] text-slate-500">
                     Square image works best · max 5MB
@@ -153,12 +154,12 @@ export function EditItemModal({
                   accept="image/*"
                   className="hidden"
                   onChange={(e) => {
-                    const file = e.target.files?.[0]
+                    const file = e.target.files?.[0];
                     if (file) {
-                      const url = URL.createObjectURL(file)
-                      setEditItemImagePreview(url)
+                      const url = URL.createObjectURL(file);
+                      setEditItemImagePreview(url);
                     } else {
-                      setEditItemImagePreview(null)
+                      setEditItemImagePreview(null);
                     }
                   }}
                 />
@@ -167,7 +168,7 @@ export function EditItemModal({
                 <div className="mt-2 flex items-center gap-3">
                   <div className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                     <img
-                      src={editItemImagePreview ?? item.imageUrl ?? ''}
+                      src={editItemImagePreview ?? item.imageUrl ?? ""}
                       alt="New image preview"
                       className="h-full w-full object-cover"
                     />
@@ -177,7 +178,7 @@ export function EditItemModal({
                       type="button"
                       className="text-[11px] font-medium text-rose-600 hover:text-rose-700"
                       onClick={() => {
-                        setEditItemImagePreview(null)
+                        setEditItemImagePreview(null);
                       }}
                     >
                       Remove new image
@@ -187,7 +188,11 @@ export function EditItemModal({
               )}
               {item.imageUrl && !editItemImagePreview && (
                 <label className="mt-1 inline-flex items-center gap-2 text-[11px] text-slate-700">
-                  <input type="checkbox" name="removeImage" className="h-3 w-3" />
+                  <input
+                    type="checkbox"
+                    name="removeImage"
+                    className="h-3 w-3"
+                  />
                   <span>Remove existing image</span>
                 </label>
               )}
@@ -227,5 +232,5 @@ export function EditItemModal({
         </form>
       </div>
     </div>
-  )
+  );
 }

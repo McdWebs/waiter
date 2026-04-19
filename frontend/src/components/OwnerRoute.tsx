@@ -1,9 +1,9 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from './AuthContext'
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "./AuthContext";
 
 export default function OwnerRoute() {
-  const { token, loading } = useAuth()
-  const location = useLocation()
+  const { token, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -12,13 +12,12 @@ export default function OwnerRoute() {
           <p className="text-sm text-slate-600">Loading your restaurant…</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!token) {
-    return <Navigate to="/owner/login" state={{ from: location }} replace />
+    return <Navigate to="/owner/login" state={{ from: location }} replace />;
   }
 
-  return <Outlet />
+  return <Outlet />;
 }
-

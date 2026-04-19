@@ -1,162 +1,176 @@
-import { useEffect, useState, type FormEvent, type ChangeEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../components/AuthContext'
-import { apiFetch } from '../lib/api'
-import type { Restaurant } from '../components/types'
-import MapLocationPicker from '../components/MapLocationPicker'
+import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../components/AuthContext";
+import { apiFetch } from "../lib/api";
+import type { Restaurant } from "../components/types";
+import MapLocationPicker from "../components/MapLocationPicker";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 const CURRENCIES = [
-  { value: 'USD', label: 'USD ($)' },
-  { value: 'EUR', label: 'EUR (€)' },
-  { value: 'GBP', label: 'GBP (£)' },
-  { value: 'ILS', label: 'ILS (₪)' },
-] as const
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "ILS", label: "ILS (₪)" },
+] as const;
 
 const RESTAURANT_TYPES = [
-  { value: '', label: 'Select type…' },
-  { value: 'Italian', label: 'Italian' },
-  { value: 'Mexican', label: 'Mexican' },
-  { value: 'Japanese', label: 'Japanese' },
-  { value: 'Chinese', label: 'Chinese' },
-  { value: 'American', label: 'American' },
-  { value: 'Mediterranean', label: 'Mediterranean' },
-  { value: 'Indian', label: 'Indian' },
-  { value: 'Thai', label: 'Thai' },
-  { value: 'Cafe', label: 'Cafe' },
-  { value: 'Fast food', label: 'Fast food' },
-  { value: 'Fine dining', label: 'Fine dining' },
-  { value: 'Bar', label: 'Bar' },
-  { value: 'Bakery', label: 'Bakery' },
-  { value: 'Pizza', label: 'Pizza' },
-  { value: 'Other', label: 'Other' },
-] as const
+  { value: "", label: "Select type…" },
+  { value: "Italian", label: "Italian" },
+  { value: "Mexican", label: "Mexican" },
+  { value: "Japanese", label: "Japanese" },
+  { value: "Chinese", label: "Chinese" },
+  { value: "American", label: "American" },
+  { value: "Mediterranean", label: "Mediterranean" },
+  { value: "Indian", label: "Indian" },
+  { value: "Thai", label: "Thai" },
+  { value: "Cafe", label: "Cafe" },
+  { value: "Fast food", label: "Fast food" },
+  { value: "Fine dining", label: "Fine dining" },
+  { value: "Bar", label: "Bar" },
+  { value: "Bakery", label: "Bakery" },
+  { value: "Pizza", label: "Pizza" },
+  { value: "Other", label: "Other" },
+] as const;
 
 const OPENING_HOURS_PRESETS = [
-  { label: 'Every day 11:00–22:00', value: 'Every day 11:00–22:00' },
-  { label: 'Mon–Fri 09:00–17:00', value: 'Mon–Fri 09:00–17:00, Sat–Sun closed' },
-  { label: 'Mon–Sat 08:00–23:00', value: 'Mon–Sat 08:00–23:00, Sun closed' },
-  { label: 'Mon–Fri 11–22, Sat–Sun 10–23', value: 'Mon–Fri 11:00–22:00, Sat–Sun 10:00–23:00' },
-  { label: 'Lunch & dinner (12–15, 18–22)', value: 'Mon–Sun 12:00–15:00 & 18:00–22:00' },
-  { label: '24/7', value: 'Open 24/7' },
-  { label: 'Breakfast & lunch (07–15)', value: 'Mon–Sun 07:00–15:00' },
-] as const
+  { label: "Every day 11:00–22:00", value: "Every day 11:00–22:00" },
+  {
+    label: "Mon–Fri 09:00–17:00",
+    value: "Mon–Fri 09:00–17:00, Sat–Sun closed",
+  },
+  { label: "Mon–Sat 08:00–23:00", value: "Mon–Sat 08:00–23:00, Sun closed" },
+  {
+    label: "Mon–Fri 11–22, Sat–Sun 10–23",
+    value: "Mon–Fri 11:00–22:00, Sat–Sun 10:00–23:00",
+  },
+  {
+    label: "Lunch & dinner (12–15, 18–22)",
+    value: "Mon–Sun 12:00–15:00 & 18:00–22:00",
+  },
+  { label: "24/7", value: "Open 24/7" },
+  { label: "Breakfast & lunch (07–15)", value: "Mon–Sun 07:00–15:00" },
+] as const;
 
 const TIMEZONES = [
-  'UTC',
-  'America/New_York',
-  'America/Los_Angeles',
-  'America/Chicago',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Asia/Jerusalem',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-]
+  "UTC",
+  "America/New_York",
+  "America/Los_Angeles",
+  "America/Chicago",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Jerusalem",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
 
 export default function OwnerSettingsPage() {
-  const { owner, restaurant, token, updateRestaurant, logout } = useAuth()
-  const navigate = useNavigate()
+  const { owner, restaurant, token, updateRestaurant, logout } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState({
-    name: '',
-    description: '',
-    restaurantType: '',
-    currency: 'USD',
-    address: '',
-    phone: '',
-    contactEmail: '',
-    timezone: 'UTC',
-    openingHoursNote: '',
-    taxRatePercent: '' as number | '',
-    serviceChargePercent: '' as number | '',
+    name: "",
+    description: "",
+    restaurantType: "",
+    currency: "USD",
+    address: "",
+    phone: "",
+    contactEmail: "",
+    timezone: "UTC",
+    openingHoursNote: "",
+    taxRatePercent: "" as number | "",
+    serviceChargePercent: "" as number | "",
     allowOrders: true,
     orderLeadTimeMinutes: 15,
-    aiInstructions: '',
+    aiInstructions: "",
     printerEnabled: false,
-    printerName: '',
+    printerName: "",
     businessPlanEnabled: false,
-    businessPlanTitle: 'עסקית',
-    businessPlanDescription: '',
-    businessPlanTimeNote: '',
-    businessPlanPrice: '' as number | '',
-    websiteUrl: '',
-    instagramUrl: '',
-    facebookUrl: '',
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [showAdvanced, setShowAdvanced] = useState(false)
-  const [logoUploading, setLogoUploading] = useState(false)
-  const [mapPickerOpen, setMapPickerOpen] = useState(false)
+    businessPlanTitle: "עסקית",
+    businessPlanDescription: "",
+    businessPlanTimeNote: "",
+    businessPlanPrice: "" as number | "",
+    websiteUrl: "",
+    instagramUrl: "",
+    facebookUrl: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
 
   useEffect(() => {
-    if (!success) return
+    if (!success) return;
     const timeout = setTimeout(() => {
-      setSuccess(null)
-    }, 4000)
-    return () => clearTimeout(timeout)
-  }, [success])
+      setSuccess(null);
+    }, 4000);
+    return () => clearTimeout(timeout);
+  }, [success]);
 
   useEffect(() => {
     if (restaurant) {
       setForm({
         name: restaurant.name,
-        description: restaurant.description ?? '',
-        restaurantType: restaurant.restaurantType ?? '',
-        currency: restaurant.currency ?? 'USD',
-        address: restaurant.address ?? '',
-        phone: restaurant.phone ?? '',
-        contactEmail: restaurant.contactEmail ?? '',
-        timezone: restaurant.timezone ?? 'UTC',
-        openingHoursNote: restaurant.openingHoursNote ?? '',
+        description: restaurant.description ?? "",
+        restaurantType: restaurant.restaurantType ?? "",
+        currency: restaurant.currency ?? "USD",
+        address: restaurant.address ?? "",
+        phone: restaurant.phone ?? "",
+        contactEmail: restaurant.contactEmail ?? "",
+        timezone: restaurant.timezone ?? "UTC",
+        openingHoursNote: restaurant.openingHoursNote ?? "",
         taxRatePercent:
-          restaurant.taxRatePercent != null ? restaurant.taxRatePercent : '',
+          restaurant.taxRatePercent != null ? restaurant.taxRatePercent : "",
         serviceChargePercent:
           restaurant.serviceChargePercent != null
             ? restaurant.serviceChargePercent
-            : '',
+            : "",
         allowOrders: restaurant.allowOrders ?? true,
         orderLeadTimeMinutes: restaurant.orderLeadTimeMinutes ?? 15,
-        aiInstructions: restaurant.aiInstructions ?? '',
+        aiInstructions: restaurant.aiInstructions ?? "",
         printerEnabled: restaurant.printerEnabled ?? false,
-        printerName: restaurant.printerName ?? '',
+        printerName: restaurant.printerName ?? "",
         businessPlanEnabled: restaurant.businessPlanEnabled ?? false,
-        businessPlanTitle: restaurant.businessPlanTitle ?? 'עסקית',
-        businessPlanDescription: restaurant.businessPlanDescription ?? '',
-        businessPlanTimeNote: restaurant.businessPlanTimeNote ?? '',
+        businessPlanTitle: restaurant.businessPlanTitle ?? "עסקית",
+        businessPlanDescription: restaurant.businessPlanDescription ?? "",
+        businessPlanTimeNote: restaurant.businessPlanTimeNote ?? "",
         businessPlanPrice:
-          restaurant.businessPlanPrice != null ? restaurant.businessPlanPrice : '',
-        websiteUrl: restaurant.websiteUrl ?? '',
-        instagramUrl: restaurant.instagramUrl ?? '',
-        facebookUrl: restaurant.facebookUrl ?? '',
-      })
+          restaurant.businessPlanPrice != null
+            ? restaurant.businessPlanPrice
+            : "",
+        websiteUrl: restaurant.websiteUrl ?? "",
+        instagramUrl: restaurant.instagramUrl ?? "",
+        facebookUrl: restaurant.facebookUrl ?? "",
+      });
     }
-  }, [restaurant])
+  }, [restaurant]);
 
   if (!restaurant || !token) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-5 text-sm text-slate-700">
         Loading restaurant settings…
       </div>
-    )
+    );
   }
 
-  const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/restaurant/${restaurant.slug}/menu`
+  const publicUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/restaurant/${restaurant.slug}/menu`;
 
-  const handleChange = (field: keyof typeof form, value: string | number | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
+  const handleChange = (
+    field: keyof typeof form,
+    value: string | number | boolean,
+  ) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
 
-  const openMapPicker = () => setMapPickerOpen(true)
+  const openMapPicker = () => setMapPickerOpen(true);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
     try {
       const body: Record<string, unknown> = {
         name: form.name.trim(),
@@ -170,138 +184,154 @@ export default function OwnerSettingsPage() {
         openingHoursNote: form.openingHoursNote.trim() || undefined,
         allowOrders: form.allowOrders,
         orderLeadTimeMinutes: form.orderLeadTimeMinutes,
+      };
+      if (typeof form.taxRatePercent === "number")
+        body.taxRatePercent = form.taxRatePercent;
+      if (typeof form.serviceChargePercent === "number")
+        body.serviceChargePercent = form.serviceChargePercent;
+      body.aiInstructions = form.aiInstructions.trim();
+      body.printerEnabled = form.printerEnabled;
+      body.printerName = form.printerName.trim() || undefined;
+      body.businessPlanEnabled = form.businessPlanEnabled;
+      body.businessPlanTitle = form.businessPlanTitle.trim() || undefined;
+      body.businessPlanDescription =
+        form.businessPlanDescription.trim() || undefined;
+      body.businessPlanTimeNote = form.businessPlanTimeNote.trim() || undefined;
+      if (typeof form.businessPlanPrice === "number") {
+        body.businessPlanPrice = form.businessPlanPrice;
       }
-      if (typeof form.taxRatePercent === 'number') body.taxRatePercent = form.taxRatePercent
-      if (typeof form.serviceChargePercent === 'number')
-        body.serviceChargePercent = form.serviceChargePercent
-      body.aiInstructions = form.aiInstructions.trim()
-      body.printerEnabled = form.printerEnabled
-      body.printerName = form.printerName.trim() || undefined
-      body.businessPlanEnabled = form.businessPlanEnabled
-      body.businessPlanTitle = form.businessPlanTitle.trim() || undefined
-      body.businessPlanDescription = form.businessPlanDescription.trim() || undefined
-      body.businessPlanTimeNote = form.businessPlanTimeNote.trim() || undefined
-      if (typeof form.businessPlanPrice === 'number') {
-        body.businessPlanPrice = form.businessPlanPrice
-      }
-      body.websiteUrl = form.websiteUrl.trim() || undefined
-      body.instagramUrl = form.instagramUrl.trim() || undefined
-      body.facebookUrl = form.facebookUrl.trim() || undefined
-      const updated = await apiFetch<Restaurant>(`/api/restaurants/${restaurant._id}`, {
-        method: 'PATCH',
-        token,
-        body: JSON.stringify(body),
-      })
-      updateRestaurant(updated)
-      setSuccess('Settings saved')
+      body.websiteUrl = form.websiteUrl.trim() || undefined;
+      body.instagramUrl = form.instagramUrl.trim() || undefined;
+      body.facebookUrl = form.facebookUrl.trim() || undefined;
+      const updated = await apiFetch<Restaurant>(
+        `/api/restaurants/${restaurant._id}`,
+        {
+          method: "PATCH",
+          token,
+          body: JSON.stringify(body),
+        },
+      );
+      updateRestaurant(updated);
+      setSuccess("Settings saved");
     } catch (err) {
-      setError((err as Error).message)
+      setError((err as Error).message);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const handleLogoFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (!restaurant || !token) return
-    const file = e.target.files?.[0]
-    if (!file) return
+    if (!restaurant || !token) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const formData = new FormData()
-    formData.append('logo', file)
+    const formData = new FormData();
+    formData.append("logo", file);
 
-    setLogoUploading(true)
-    setError(null)
-    setSuccess(null)
+    setLogoUploading(true);
+    setError(null);
+    setSuccess(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/restaurants/${restaurant._id}/logo`, {
-        method: 'POST',
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      const res = await fetch(
+        `${API_BASE}/api/restaurants/${restaurant._id}/logo`,
+        {
+          method: "POST",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: formData,
         },
-        body: formData,
-      })
-      const json = (await res.json()) as Restaurant & { message?: string }
+      );
+      const json = (await res.json()) as Restaurant & { message?: string };
       if (!res.ok) {
-        throw new Error(json.message ?? 'Failed to upload logo')
+        throw new Error(json.message ?? "Failed to upload logo");
       }
-      updateRestaurant(json)
-      setSuccess('Logo updated')
+      updateRestaurant(json);
+      setSuccess("Logo updated");
     } catch (err) {
-      setError((err as Error).message)
+      setError((err as Error).message);
     } finally {
-      setLogoUploading(false)
+      setLogoUploading(false);
       // Allow selecting the same file again if needed
-      e.target.value = ''
+      e.target.value = "";
     }
-  }
+  };
 
   const handleRemoveLogo = async () => {
-    if (!restaurant || !token) return
-    setLogoUploading(true)
-    setError(null)
-    setSuccess(null)
+    if (!restaurant || !token) return;
+    setLogoUploading(true);
+    setError(null);
+    setSuccess(null);
     try {
-      const updated = await apiFetch<Restaurant>(`/api/restaurants/${restaurant._id}`, {
-        method: 'PATCH',
-        token,
-        body: JSON.stringify({ logoUrl: '' }),
-      })
-      updateRestaurant(updated)
-      setSuccess('Logo removed')
+      const updated = await apiFetch<Restaurant>(
+        `/api/restaurants/${restaurant._id}`,
+        {
+          method: "PATCH",
+          token,
+          body: JSON.stringify({ logoUrl: "" }),
+        },
+      );
+      updateRestaurant(updated);
+      setSuccess("Logo removed");
     } catch (err) {
-      setError((err as Error).message)
+      setError((err as Error).message);
     } finally {
-      setLogoUploading(false)
+      setLogoUploading(false);
     }
-  }
+  };
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(publicUrl)
-      setSuccess('Public menu link copied')
-      setError(null)
+      await navigator.clipboard.writeText(publicUrl);
+      setSuccess("Public menu link copied");
+      setError(null);
     } catch {
-      setError('Failed to copy link')
-      setSuccess(null)
+      setError("Failed to copy link");
+      setSuccess(null);
     }
-  }
+  };
 
   const inputClass =
-    'w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400'
-  const labelClass = 'text-xs font-medium text-slate-700'
+    "w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400";
+  const labelClass = "text-xs font-medium text-slate-700";
 
   const isPristine =
     form.name.trim() === restaurant.name &&
-    (form.description ?? '').trim() === (restaurant.description ?? '') &&
-    (form.restaurantType ?? '') === (restaurant.restaurantType ?? '') &&
-    form.currency === (restaurant.currency ?? 'USD') &&
-    (form.address ?? '') === (restaurant.address ?? '') &&
-    (form.phone ?? '') === (restaurant.phone ?? '') &&
-    (form.contactEmail ?? '') === (restaurant.contactEmail ?? '') &&
-    (form.timezone ?? 'UTC') === (restaurant.timezone ?? 'UTC') &&
-    (form.openingHoursNote ?? '') === (restaurant.openingHoursNote ?? '') &&
+    (form.description ?? "").trim() === (restaurant.description ?? "") &&
+    (form.restaurantType ?? "") === (restaurant.restaurantType ?? "") &&
+    form.currency === (restaurant.currency ?? "USD") &&
+    (form.address ?? "") === (restaurant.address ?? "") &&
+    (form.phone ?? "") === (restaurant.phone ?? "") &&
+    (form.contactEmail ?? "") === (restaurant.contactEmail ?? "") &&
+    (form.timezone ?? "UTC") === (restaurant.timezone ?? "UTC") &&
+    (form.openingHoursNote ?? "") === (restaurant.openingHoursNote ?? "") &&
     form.allowOrders === (restaurant.allowOrders ?? true) &&
     form.orderLeadTimeMinutes === (restaurant.orderLeadTimeMinutes ?? 15) &&
     form.taxRatePercent ===
-      (restaurant.taxRatePercent != null ? restaurant.taxRatePercent : '') &&
+      (restaurant.taxRatePercent != null ? restaurant.taxRatePercent : "") &&
     form.serviceChargePercent ===
-      (restaurant.serviceChargePercent != null ? restaurant.serviceChargePercent : '') &&
-    (form.aiInstructions ?? '').trim() === (restaurant.aiInstructions ?? '').trim() &&
+      (restaurant.serviceChargePercent != null
+        ? restaurant.serviceChargePercent
+        : "") &&
+    (form.aiInstructions ?? "").trim() ===
+      (restaurant.aiInstructions ?? "").trim() &&
     form.printerEnabled === (restaurant.printerEnabled ?? false) &&
-    (form.printerName ?? '') === (restaurant.printerName ?? '') &&
+    (form.printerName ?? "") === (restaurant.printerName ?? "") &&
     form.businessPlanEnabled === (restaurant.businessPlanEnabled ?? false) &&
-    (form.businessPlanTitle ?? 'עסקית') ===
-      (restaurant.businessPlanTitle ?? 'עסקית') &&
-    (form.businessPlanDescription ?? '') ===
-      (restaurant.businessPlanDescription ?? '') &&
-    (form.businessPlanTimeNote ?? '') ===
-      (restaurant.businessPlanTimeNote ?? '') &&
+    (form.businessPlanTitle ?? "עסקית") ===
+      (restaurant.businessPlanTitle ?? "עסקית") &&
+    (form.businessPlanDescription ?? "") ===
+      (restaurant.businessPlanDescription ?? "") &&
+    (form.businessPlanTimeNote ?? "") ===
+      (restaurant.businessPlanTimeNote ?? "") &&
     form.businessPlanPrice ===
-      (restaurant.businessPlanPrice != null ? restaurant.businessPlanPrice : '') &&
-    (form.websiteUrl ?? '') === (restaurant.websiteUrl ?? '') &&
-    (form.instagramUrl ?? '') === (restaurant.instagramUrl ?? '') &&
-    (form.facebookUrl ?? '') === (restaurant.facebookUrl ?? '')
+      (restaurant.businessPlanPrice != null
+        ? restaurant.businessPlanPrice
+        : "") &&
+    (form.websiteUrl ?? "") === (restaurant.websiteUrl ?? "") &&
+    (form.instagramUrl ?? "") === (restaurant.instagramUrl ?? "") &&
+    (form.facebookUrl ?? "") === (restaurant.facebookUrl ?? "");
 
   return (
     <div className="space-y-4">
@@ -319,21 +349,23 @@ export default function OwnerSettingsPage() {
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:gap-3">
             <div className="hidden rounded-full bg-slate-50 px-3 py-1 sm:block">
               <span className="font-medium text-slate-800">
-                {restaurant.name ?? 'Restaurant'}
+                {restaurant.name ?? "Restaurant"}
               </span>
             </div>
             <div className="rounded-full bg-slate-50 px-2.5 py-1 sm:px-3">
-              <span className="font-medium text-slate-800">{form.currency}</span>
+              <span className="font-medium text-slate-800">
+                {form.currency}
+              </span>
             </div>
             <div
               className={`flex items-center gap-1 rounded-full px-2.5 py-1 sm:px-3 ${
                 form.allowOrders
-                  ? 'bg-emerald-50 text-emerald-800'
-                  : 'bg-slate-100 text-slate-700'
+                  ? "bg-emerald-50 text-emerald-800"
+                  : "bg-slate-100 text-slate-700"
               }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-current" />
-              <span>{form.allowOrders ? 'Orders on' : 'Orders off'}</span>
+              <span>{form.allowOrders ? "Orders on" : "Orders off"}</span>
             </div>
           </div>
         </div>
@@ -347,14 +379,14 @@ export default function OwnerSettingsPage() {
         </p>
         <div className="mt-3 flex flex-col gap-2 text-sm">
           <p className="truncate rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700">
-            {owner?.email ?? '—'}
+            {owner?.email ?? "—"}
           </p>
           <button
             type="button"
             className="rounded-full bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
             onClick={() => {
-              logout()
-              navigate('/owner/login', { replace: true })
+              logout();
+              navigate("/owner/login", { replace: true });
             }}
           >
             Sign out
@@ -366,7 +398,9 @@ export default function OwnerSettingsPage() {
         {/* Main settings form */}
         <form onSubmit={handleSubmit} className="space-y-4 lg:order-1">
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:py-4">
-            <h2 className="text-sm font-semibold text-slate-900">Restaurant details</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Restaurant details
+            </h2>
             <p className="mt-1 text-xs text-slate-500">
               Basic information shown to guests.
             </p>
@@ -380,7 +414,7 @@ export default function OwnerSettingsPage() {
                     id="name"
                     name="name"
                     value={form.name}
-                    onChange={(e) => handleChange('name', e.target.value)}
+                    onChange={(e) => handleChange("name", e.target.value)}
                     className={inputClass}
                     placeholder="Restaurant name"
                   />
@@ -393,11 +427,13 @@ export default function OwnerSettingsPage() {
                     id="restaurantType"
                     name="restaurantType"
                     value={form.restaurantType}
-                    onChange={(e) => handleChange('restaurantType', e.target.value)}
-                  className={inputClass}
+                    onChange={(e) =>
+                      handleChange("restaurantType", e.target.value)
+                    }
+                    className={inputClass}
                   >
                     {RESTAURANT_TYPES.map((t) => (
-                      <option key={t.value || 'blank'} value={t.value}>
+                      <option key={t.value || "blank"} value={t.value}>
                         {t.label}
                       </option>
                     ))}
@@ -411,8 +447,8 @@ export default function OwnerSettingsPage() {
                     id="currency"
                     name="currency"
                     value={form.currency}
-                    onChange={(e) => handleChange('currency', e.target.value)}
-                  className={inputClass}
+                    onChange={(e) => handleChange("currency", e.target.value)}
+                    className={inputClass}
                   >
                     {CURRENCIES.map((c) => (
                       <option key={c.value} value={c.value}>
@@ -434,7 +470,7 @@ export default function OwnerSettingsPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      (restaurant.name?.[0] ?? 'R')
+                      (restaurant.name?.[0] ?? "R")
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -445,7 +481,9 @@ export default function OwnerSettingsPage() {
                         className="hidden"
                         onChange={handleLogoFileChange}
                       />
-                      <span>{logoUploading ? 'Uploading…' : 'Upload logo'}</span>
+                      <span>
+                        {logoUploading ? "Uploading…" : "Upload logo"}
+                      </span>
                     </label>
                     {restaurant.logoUrl && (
                       <button
@@ -471,7 +509,7 @@ export default function OwnerSettingsPage() {
                   id="description"
                   name="description"
                   value={form.description}
-                  onChange={(e) => handleChange('description', e.target.value)}
+                  onChange={(e) => handleChange("description", e.target.value)}
                   className="min-h-[72px] w-full resize-y rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                   placeholder="e.g. Cozy Italian bistro in the heart of the city"
                   rows={3}
@@ -479,7 +517,6 @@ export default function OwnerSettingsPage() {
               </div>
             </div>
           </div>
-
 
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:py-4">
             <h2 className="text-sm font-semibold text-slate-900">Contact</h2>
@@ -497,7 +534,7 @@ export default function OwnerSettingsPage() {
                       id="address"
                       name="address"
                       value={form.address}
-                      onChange={(e) => handleChange('address', e.target.value)}
+                      onChange={(e) => handleChange("address", e.target.value)}
                       className={inputClass}
                       placeholder="Street, city, postal code"
                     />
@@ -514,7 +551,7 @@ export default function OwnerSettingsPage() {
                   <MapLocationPicker
                     open={mapPickerOpen}
                     onClose={() => setMapPickerOpen(false)}
-                    onSelect={(address) => handleChange('address', address)}
+                    onSelect={(address) => handleChange("address", address)}
                   />
                 </div>
                 <div className="space-y-1">
@@ -526,7 +563,7 @@ export default function OwnerSettingsPage() {
                     name="phone"
                     type="tel"
                     value={form.phone}
-                    onChange={(e) => handleChange('phone', e.target.value)}
+                    onChange={(e) => handleChange("phone", e.target.value)}
                     className={inputClass}
                     placeholder="+1 234 567 8900"
                   />
@@ -541,7 +578,7 @@ export default function OwnerSettingsPage() {
                   name="contactEmail"
                   type="email"
                   value={form.contactEmail}
-                  onChange={(e) => handleChange('contactEmail', e.target.value)}
+                  onChange={(e) => handleChange("contactEmail", e.target.value)}
                   className={inputClass}
                   placeholder="contact@restaurant.com"
                 />
@@ -550,7 +587,9 @@ export default function OwnerSettingsPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:py-4">
-            <h2 className="text-sm font-semibold text-slate-900">Online presence</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Online presence
+            </h2>
             <p className="mt-1 text-xs text-slate-500">
               Social links shown in the footer of your guest menu.
             </p>
@@ -565,7 +604,7 @@ export default function OwnerSettingsPage() {
                     name="websiteUrl"
                     type="url"
                     value={form.websiteUrl}
-                    onChange={(e) => handleChange('websiteUrl', e.target.value)}
+                    onChange={(e) => handleChange("websiteUrl", e.target.value)}
                     className={inputClass}
                     placeholder="https://yourrestaurant.com"
                   />
@@ -579,7 +618,9 @@ export default function OwnerSettingsPage() {
                     name="instagramUrl"
                     type="url"
                     value={form.instagramUrl}
-                    onChange={(e) => handleChange('instagramUrl', e.target.value)}
+                    onChange={(e) =>
+                      handleChange("instagramUrl", e.target.value)
+                    }
                     className={inputClass}
                     placeholder="https://instagram.com/yourpage"
                   />
@@ -593,7 +634,9 @@ export default function OwnerSettingsPage() {
                     name="facebookUrl"
                     type="url"
                     value={form.facebookUrl}
-                    onChange={(e) => handleChange('facebookUrl', e.target.value)}
+                    onChange={(e) =>
+                      handleChange("facebookUrl", e.target.value)
+                    }
                     className={inputClass}
                     placeholder="https://facebook.com/yourpage"
                   />
@@ -603,9 +646,12 @@ export default function OwnerSettingsPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:py-4">
-            <h2 className="text-sm font-semibold text-slate-900">Opening hours</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Opening hours
+            </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Timezone and when you&apos;re open. Pick a preset or type your own.
+              Timezone and when you&apos;re open. Pick a preset or type your
+              own.
             </p>
             <div className="mt-3 space-y-3 text-sm">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -617,8 +663,8 @@ export default function OwnerSettingsPage() {
                     id="timezone"
                     name="timezone"
                     value={form.timezone}
-                    onChange={(e) => handleChange('timezone', e.target.value)}
-                  className={inputClass}
+                    onChange={(e) => handleChange("timezone", e.target.value)}
+                    className={inputClass}
                   >
                     {TIMEZONES.map((tz) => (
                       <option key={tz} value={tz}>
@@ -635,7 +681,9 @@ export default function OwnerSettingsPage() {
                     id="openingHoursNote"
                     name="openingHoursNote"
                     value={form.openingHoursNote}
-                    onChange={(e) => handleChange('openingHoursNote', e.target.value)}
+                    onChange={(e) =>
+                      handleChange("openingHoursNote", e.target.value)
+                    }
                     className={inputClass}
                     placeholder="e.g. Mon–Fri 11:00–22:00, Sat–Sun 10:00–23:00"
                   />
@@ -648,11 +696,13 @@ export default function OwnerSettingsPage() {
                     <button
                       key={preset.value}
                       type="button"
-                      onClick={() => handleChange('openingHoursNote', preset.value)}
+                      onClick={() =>
+                        handleChange("openingHoursNote", preset.value)
+                      }
                       className={`rounded-full border px-2.5 py-1.5 text-[11px] sm:px-3 sm:text-xs font-medium transition-colors ${
                         form.openingHoursNote === preset.value
-                          ? 'border-slate-800 bg-slate-800 text-white'
-                          : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50'
+                          ? "border-slate-800 bg-slate-800 text-white"
+                          : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50"
                       }`}
                     >
                       {preset.label}
@@ -675,7 +725,9 @@ export default function OwnerSettingsPage() {
                   name="allowOrders"
                   type="checkbox"
                   checked={form.allowOrders}
-                  onChange={(e) => handleChange('allowOrders', e.target.checked)}
+                  onChange={(e) =>
+                    handleChange("allowOrders", e.target.checked)
+                  }
                   className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
                 />
                 <label htmlFor="allowOrders" className={labelClass}>
@@ -694,7 +746,10 @@ export default function OwnerSettingsPage() {
                   max={120}
                   value={form.orderLeadTimeMinutes}
                   onChange={(e) =>
-                    handleChange('orderLeadTimeMinutes', parseInt(e.target.value, 10) || 0)
+                    handleChange(
+                      "orderLeadTimeMinutes",
+                      parseInt(e.target.value, 10) || 0,
+                    )
                   }
                   className={inputClass}
                 />
@@ -708,7 +763,9 @@ export default function OwnerSettingsPage() {
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900">Advanced settings</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Advanced settings
+                </h2>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Printer and AI behavior. You can leave these as they are.
                 </p>
@@ -718,7 +775,7 @@ export default function OwnerSettingsPage() {
                 className="rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-800"
                 onClick={() => setShowAdvanced((prev) => !prev)}
               >
-                {showAdvanced ? 'Hide advanced' : 'Show advanced'}
+                {showAdvanced ? "Hide advanced" : "Show advanced"}
               </button>
             </div>
           </div>
@@ -726,30 +783,33 @@ export default function OwnerSettingsPage() {
           {showAdvanced && (
             <>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <h2 className="text-sm font-semibold text-slate-900">Printer</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Printer
+                </h2>
                 <details className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700">
                   <summary className="cursor-pointer list-none font-medium text-slate-800">
                     How to connect your printer
                   </summary>
                   <ol className="mt-1.5 list-decimal list-inside space-y-1 text-slate-600">
                     <li>
-                      Open the <strong>Kitchen</strong> page on the computer that is next to (or
-                      connected to) your receipt/kitchen printer.
+                      Open the <strong>Kitchen</strong> page on the computer
+                      that is next to (or connected to) your receipt/kitchen
+                      printer.
                     </li>
                     <li>
-                      On that computer, set your kitchen printer as the{' '}
-                      <strong>default printer</strong> (in System Settings on Mac, or Settings →
-                      Devices → Printers on Windows).
+                      On that computer, set your kitchen printer as the{" "}
+                      <strong>default printer</strong> (in System Settings on
+                      Mac, or Settings → Devices → Printers on Windows).
                     </li>
                     <li>
-                      When a new order appears, click <strong>Print</strong> on the order card. The
-                      browser will use the default printer, or you can pick the printer in the
-                      print dialog.
+                      When a new order appears, click <strong>Print</strong> on
+                      the order card. The browser will use the default printer,
+                      or you can pick the printer in the print dialog.
                     </li>
                   </ol>
                   <p className="mt-2 text-slate-500">
-                    There is no separate “printer pairing” in this app—the connection is through
-                    the computer’s default printer.
+                    There is no separate “printer pairing” in this app—the
+                    connection is through the computer’s default printer.
                   </p>
                 </details>
                 <div className="mt-4 space-y-3 text-sm">
@@ -759,7 +819,9 @@ export default function OwnerSettingsPage() {
                       name="printerEnabled"
                       type="checkbox"
                       checked={form.printerEnabled}
-                      onChange={(e) => handleChange('printerEnabled', e.target.checked)}
+                      onChange={(e) =>
+                        handleChange("printerEnabled", e.target.checked)
+                      }
                       className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
                     />
                     <label htmlFor="printerEnabled" className={labelClass}>
@@ -775,23 +837,27 @@ export default function OwnerSettingsPage() {
                       name="printerName"
                       type="text"
                       value={form.printerName}
-                      onChange={(e) => handleChange('printerName', e.target.value)}
+                      onChange={(e) =>
+                        handleChange("printerName", e.target.value)
+                      }
                       className={inputClass}
                       placeholder="e.g. Kitchen receipt printer"
                     />
                     <p className="text-[11px] text-slate-500">
-                      For your reference only—reminds you which printer you set as default on the
-                      Kitchen computer.
+                      For your reference only—reminds you which printer you set
+                      as default on the Kitchen computer.
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <h2 className="text-sm font-semibold text-slate-900">AI waiter instructions</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  AI waiter instructions
+                </h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  Customize how the AI behaves: tone, what to emphasize, or extra rules. Leave
-                  blank to use defaults.
+                  Customize how the AI behaves: tone, what to emphasize, or
+                  extra rules. Leave blank to use defaults.
                 </p>
                 <div className="mt-4 space-y-1">
                   <label htmlFor="aiInstructions" className={labelClass}>
@@ -801,30 +867,36 @@ export default function OwnerSettingsPage() {
                     id="aiInstructions"
                     name="aiInstructions"
                     value={form.aiInstructions}
-                    onChange={(e) => handleChange('aiInstructions', e.target.value)}
+                    onChange={(e) =>
+                      handleChange("aiInstructions", e.target.value)
+                    }
                     className="min-h-[100px] w-full resize-y rounded-2xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                     placeholder="e.g. Be casual and brief. Always mention if a dish is gluten-free. Suggest our house special when they're unsure."
                     rows={4}
                   />
                   <p className="text-[11px] text-slate-500">
-                    The AI still only answers from the menu; use this to control style and
-                    priorities.
+                    The AI still only answers from the menu; use this to control
+                    style and priorities.
                   </p>
                 </div>
               </div>
 
               <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm sm:block">
-                <h2 className="text-sm font-semibold text-slate-900">Account</h2>
-                <p className="mt-1 text-xs text-slate-500">You are signed in as:</p>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Account
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  You are signed in as:
+                </p>
                 <p className="mt-2 truncate rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-                  {owner?.email ?? '—'}
+                  {owner?.email ?? "—"}
                 </p>
                 <button
                   type="button"
                   className="mt-3 w-full rounded-full bg-slate-800 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
                   onClick={() => {
-                    logout()
-                    navigate('/owner/login', { replace: true })
+                    logout();
+                    navigate("/owner/login", { replace: true });
                   }}
                 >
                   Sign out
@@ -832,10 +904,12 @@ export default function OwnerSettingsPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm">
-                <h2 className="text-sm font-semibold text-slate-900">Public menu link</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  Public menu link
+                </h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  Share this link with your guests so they can view the menu and order from their
-                  table.
+                  Share this link with your guests so they can view the menu and
+                  order from their table.
                 </p>
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <code className="min-w-0 flex-1 truncate rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800">
@@ -920,7 +994,7 @@ export default function OwnerSettingsPage() {
               className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
               disabled={saving || isPristine}
             >
-              {saving ? 'Saving…' : 'Save all settings'}
+              {saving ? "Saving…" : "Save all settings"}
             </button>
           </div>
         </form>
@@ -928,5 +1002,5 @@ export default function OwnerSettingsPage() {
         {/* Sidebar is rendered above the form (lg:order-2 puts it right on desktop) */}
       </div>
     </div>
-  )
+  );
 }

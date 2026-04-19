@@ -1,5 +1,4 @@
-Mascot asset contract
-=====================
+# Mascot asset contract
 
 Place transparent PNG files in this folder with these exact names:
 

@@ -1,9 +1,9 @@
 interface AddCategoryToolbarProps {
-  saving: boolean
-  addCategoryOpen: boolean
-  setAddCategoryOpen: (open: boolean) => void
-  setBulkImportOpen: (open: boolean) => void
-  addCategory: (name: string) => Promise<void>
+  saving: boolean;
+  addCategoryOpen: boolean;
+  setAddCategoryOpen: (open: boolean) => void;
+  setBulkImportOpen: (open: boolean) => void;
+  addCategory: (name: string) => Promise<void>;
 }
 
 export function AddCategoryToolbar({
@@ -39,13 +39,13 @@ export function AddCategoryToolbar({
           <form
             className="flex flex-col gap-2 text-xs"
             onSubmit={(e) => {
-              e.preventDefault()
-              const form = e.currentTarget
-              const formData = new FormData(form)
-              const name = (formData.get('name') as string) ?? ''
-              void addCategory(name)
-              form.reset()
-              setAddCategoryOpen(false)
+              e.preventDefault();
+              const form = e.currentTarget;
+              const formData = new FormData(form);
+              const name = (formData.get("name") as string) ?? "";
+              void addCategory(name);
+              form.reset();
+              setAddCategoryOpen(false);
             }}
           >
             <input
@@ -74,16 +74,18 @@ export function AddCategoryToolbar({
         )}
       </div>
       <div className="hidden sm:block">
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">Add category</h2>
+        <h2 className="mb-2 text-sm font-semibold text-slate-900">
+          Add category
+        </h2>
         <form
           className="flex flex-col gap-2 text-xs sm:flex-row"
           onSubmit={(e) => {
-            e.preventDefault()
-            const form = e.currentTarget
-            const formData = new FormData(form)
-            const name = (formData.get('name') as string) ?? ''
-            void addCategory(name)
-            form.reset()
+            e.preventDefault();
+            const form = e.currentTarget;
+            const formData = new FormData(form);
+            const name = (formData.get("name") as string) ?? "";
+            void addCategory(name);
+            form.reset();
           }}
         >
           <input
@@ -109,5 +111,5 @@ export function AddCategoryToolbar({
         </form>
       </div>
     </section>
-  )
+  );
 }

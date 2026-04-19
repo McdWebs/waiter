@@ -1,14 +1,14 @@
-import { useCart } from './CartContext'
-import { useState } from 'react'
+import { useCart } from "./CartContext";
+import { useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 interface Props {
-  restaurantId: string
-  open: boolean
-  onClose: () => void
-  onConfirmed: () => void
-  initialTable?: string
+  restaurantId: string;
+  open: boolean;
+  onClose: () => void;
+  onConfirmed: () => void;
+  initialTable?: string;
 }
 
 export default function OrderConfirmationModal({
@@ -17,29 +17,31 @@ export default function OrderConfirmationModal({
   onClose,
   onConfirmed,
   initialTable,
-  currencySymbol = '$',
+  currencySymbol = "$",
 }: Props & { currencySymbol?: string }) {
-  const { items, totalPrice, clear } = useCart()
-  const [tableNumber, setTableNumber] = useState(initialTable ?? '')
-  const [notes, setNotes] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { items, totalPrice, clear } = useCart();
+  const [tableNumber, setTableNumber] = useState(initialTable ?? "");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!open) return null
+  if (!open) return null;
 
   const submitOrder = async () => {
-    setSubmitting(true)
-    setError(null)
+    setSubmitting(true);
+    setError(null);
     try {
-      let waiterName: string | undefined
-      if (typeof window !== 'undefined' && tableNumber.trim()) {
+      let waiterName: string | undefined;
+      if (typeof window !== "undefined" && tableNumber.trim()) {
         try {
-          const stored = window.localStorage.getItem(`kitchenWaiterNames:${restaurantId}`)
+          const stored = window.localStorage.getItem(
+            `kitchenWaiterNames:${restaurantId}`,
+          );
           if (stored) {
-            const parsed = JSON.parse(stored) as Record<string, string>
-            const fromTable = parsed?.[tableNumber.trim()]
-            if (typeof fromTable === 'string' && fromTable.trim()) {
-              waiterName = fromTable.trim()
+            const parsed = JSON.parse(stored) as Record<string, string>;
+            const fromTable = parsed?.[tableNumber.trim()];
+            if (typeof fromTable === "string" && fromTable.trim()) {
+              waiterName = fromTable.trim();
             }
           }
         } catch {
@@ -47,60 +49,67 @@ export default function OrderConfirmationModal({
         }
       }
 
-      const payloadItemsMap = new Map<string, { quantity: number; notes?: string }>()
+      const payloadItemsMap = new Map<
+        string,
+        { quantity: number; notes?: string }
+      >();
       for (const item of items) {
         if (item.bundleItems && item.bundleItems.length > 0) {
           for (const bundled of item.bundleItems) {
-            const existing = payloadItemsMap.get(bundled.menuItemId)
-            const nextQty = bundled.quantity * item.quantity
+            const existing = payloadItemsMap.get(bundled.menuItemId);
+            const nextQty = bundled.quantity * item.quantity;
             payloadItemsMap.set(bundled.menuItemId, {
               quantity: (existing?.quantity ?? 0) + nextQty,
               notes: existing?.notes ?? item.notes,
-            })
+            });
           }
-          continue
+          continue;
         }
-        const existing = payloadItemsMap.get(item.menuItemId)
+        const existing = payloadItemsMap.get(item.menuItemId);
         payloadItemsMap.set(item.menuItemId, {
           quantity: (existing?.quantity ?? 0) + item.quantity,
           notes: existing?.notes ?? item.notes,
-        })
+        });
       }
 
       const res = await fetch(`${API_BASE}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           restaurantId,
           tableNumber: tableNumber || undefined,
           waiterName,
           notes: notes || undefined,
-          items: Array.from(payloadItemsMap.entries()).map(([menuItemId, value]) => ({
-            menuItemId,
-            quantity: value.quantity,
-            notes: value.notes,
-          })),
+          items: Array.from(payloadItemsMap.entries()).map(
+            ([menuItemId, value]) => ({
+              menuItemId,
+              quantity: value.quantity,
+              notes: value.notes,
+            }),
+          ),
         }),
-      })
-      const data = (await res.json()) as { orderId?: string; message?: string }
+      });
+      const data = (await res.json()) as { orderId?: string; message?: string };
       if (!res.ok) {
-        throw new Error(data.message ?? 'Failed to submit order')
+        throw new Error(data.message ?? "Failed to submit order");
       }
-      clear()
-      onConfirmed()
-      onClose()
+      clear();
+      onConfirmed();
+      onClose();
     } catch (err) {
-      setError((err as Error).message)
+      setError((err as Error).message);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-black/40 sm:items-center">
       <div className="w-full rounded-t-3xl bg-white p-4 sm:mx-auto sm:max-w-md sm:rounded-3xl sm:border sm:border-slate-200 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">Review your order</h2>
+          <h2 className="text-sm font-semibold text-slate-900">
+            Review your order
+          </h2>
           <button
             type="button"
             className="text-xs text-slate-500 hover:text-slate-800"
@@ -116,7 +125,11 @@ export default function OrderConfirmationModal({
                 <div className="font-medium text-slate-900">
                   {item.quantity} × {item.name}
                 </div>
-                {item.notes && <div className="text-[10px] text-slate-500">Note: {item.notes}</div>}
+                {item.notes && (
+                  <div className="text-[10px] text-slate-500">
+                    Note: {item.notes}
+                  </div>
+                )}
               </div>
               <div className="text-right text-slate-900">
                 {currencySymbol}
@@ -159,11 +172,10 @@ export default function OrderConfirmationModal({
             disabled={submitting}
             onClick={() => void submitOrder()}
           >
-            {submitting ? 'Sending…' : 'Send to kitchen'}
+            {submitting ? "Sending…" : "Send to kitchen"}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
-

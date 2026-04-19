@@ -1,30 +1,38 @@
-import { Schema, model, type Document, type Types } from 'mongoose'
+import { Schema, model, type Document, type Types } from "mongoose";
 
-export type OrderStatus = 'new' | 'preparing' | 'ready'
+export type OrderStatus = "new" | "preparing" | "ready";
 
 export interface OrderDocument extends Document {
-  restaurantId: Types.ObjectId
-  status: OrderStatus
-  createdAt: Date
-  updatedAt: Date
-  tableNumber?: string
-  waiterName?: string
-  notes?: string
-  closedAt?: Date
+  restaurantId: Types.ObjectId;
+  status: OrderStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  tableNumber?: string;
+  waiterName?: string;
+  notes?: string;
+  closedAt?: Date;
 }
 
 const orderSchema = new Schema<OrderDocument>(
   {
-    restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
-    status: { type: String, enum: ['new', 'preparing', 'ready'], default: 'new' },
+    restaurantId: {
+      type: Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["new", "preparing", "ready"],
+      default: "new",
+    },
     tableNumber: { type: String },
     waiterName: { type: String },
     notes: { type: String },
     closedAt: { type: Date },
   },
-  { timestamps: true }
-)
+  { timestamps: true },
+);
 
-orderSchema.index({ restaurantId: 1, createdAt: -1 })
+orderSchema.index({ restaurantId: 1, createdAt: -1 });
 
-export const Order = model<OrderDocument>('Order', orderSchema)
+export const Order = model<OrderDocument>("Order", orderSchema);

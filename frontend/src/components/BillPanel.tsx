@@ -103,9 +103,9 @@ export default function BillPanel({
   const [callingCheckout, setCallingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
-  const [activeCheckoutCallId, setActiveCheckoutCallId] = useState<string | null>(
-    null,
-  );
+  const [activeCheckoutCallId, setActiveCheckoutCallId] = useState<
+    string | null
+  >(null);
   const [checkoutHandled, setCheckoutHandled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -223,12 +223,15 @@ export default function BillPanel({
         const targetTable = latestOrderTable ?? tableNumber;
         const existingWaiterCall = data.find(
           (call) =>
-            (targetTable ? call.tableNumber === targetTable : !call.tableNumber) &&
-            !isCheckoutRequest(call),
+            (targetTable
+              ? call.tableNumber === targetTable
+              : !call.tableNumber) && !isCheckoutRequest(call),
         );
-        const existingCheckoutCall = data.find((call) =>
-          (targetTable ? call.tableNumber === targetTable : !call.tableNumber) &&
-          isCheckoutRequest(call),
+        const existingCheckoutCall = data.find(
+          (call) =>
+            (targetTable
+              ? call.tableNumber === targetTable
+              : !call.tableNumber) && isCheckoutRequest(call),
         );
         if (existingWaiterCall) {
           setActiveCallId(existingWaiterCall._id);
@@ -395,61 +398,64 @@ export default function BillPanel({
           )}
           {!loading &&
             orders.map((order) => (
-            <div
-              key={order._id}
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-            >
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-slate-800">
-                  Order #{order._id.slice(-5)}
-                </span>
-                <span className="text-[11px] text-slate-500">
-                  {new Date(order.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-              {order.tableNumber && (
-                <p className="mb-1 text-[11px] text-slate-500">
-                  Table:{" "}
-                  <span className="font-medium text-slate-800">
-                    {order.tableNumber}
+              <div
+                key={order._id}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-slate-800">
+                    Order #{order._id.slice(-5)}
                   </span>
-                </p>
-              )}
-              <ul className="mb-1 space-y-1 text-[11px] text-slate-700">
-                {order.items.map((item) => (
-                  <li key={item._id} className="flex justify-between gap-2">
-                    <span>
-                      {item.quantity} × {item.menuItem?.name ?? "Unknown item"}
+                  <span className="text-[11px] text-slate-500">
+                    {new Date(order.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                {order.tableNumber && (
+                  <p className="mb-1 text-[11px] text-slate-500">
+                    Table:{" "}
+                    <span className="font-medium text-slate-800">
+                      {order.tableNumber}
                     </span>
-                    <span className="text-slate-800">
-                      {currencySymbol}
-                      {((item.menuItem?.price ?? 0) * item.quantity).toFixed(2)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {order.notes && (
-                <p className="mb-1 text-[11px] text-slate-500">
-                  Note: {order.notes}
-                </p>
-              )}
-              <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1 text-[11px] font-semibold text-slate-900">
-                <span>Total</span>
-                <span>
-                  {currencySymbol}
-                  {order.items
-                    .reduce(
-                      (sum, item) =>
-                        sum + (item.menuItem?.price ?? 0) * item.quantity,
-                      0,
-                    )
-                    .toFixed(2)}
-                </span>
+                  </p>
+                )}
+                <ul className="mb-1 space-y-1 text-[11px] text-slate-700">
+                  {order.items.map((item) => (
+                    <li key={item._id} className="flex justify-between gap-2">
+                      <span>
+                        {item.quantity} ×{" "}
+                        {item.menuItem?.name ?? "Unknown item"}
+                      </span>
+                      <span className="text-slate-800">
+                        {currencySymbol}
+                        {((item.menuItem?.price ?? 0) * item.quantity).toFixed(
+                          2,
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {order.notes && (
+                  <p className="mb-1 text-[11px] text-slate-500">
+                    Note: {order.notes}
+                  </p>
+                )}
+                <div className="mt-1 flex items-center justify-between border-t border-slate-200 pt-1 text-[11px] font-semibold text-slate-900">
+                  <span>Total</span>
+                  <span>
+                    {currencySymbol}
+                    {order.items
+                      .reduce(
+                        (sum, item) =>
+                          sum + (item.menuItem?.price ?? 0) * item.quantity,
+                        0,
+                      )
+                      .toFixed(2)}
+                  </span>
+                </div>
               </div>
-            </div>
             ))}
         </div>
         {loading && <BillPanelTotalsSkeleton />}
@@ -500,9 +506,7 @@ export default function BillPanel({
             <button
               type="button"
               className="flex-1 rounded-full bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
-              disabled={
-                loading || callingWaiter || Boolean(activeCallId)
-              }
+              disabled={loading || callingWaiter || Boolean(activeCallId)}
               onClick={() => void callWaiter()}
             >
               {callingWaiter

@@ -1,26 +1,30 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
-import { io, type Socket } from 'socket.io-client'
-import { CartProvider, useCart } from '../components/CartContext'
-import type { BusinessPlan, MenuCategory, Restaurant } from '../components/types'
-import MenuItemCard from '../components/MenuItemCard'
-import CartSummary from '../components/CartSummary'
-import ChatPanel from '../components/ChatPanel'
-import OrderConfirmationModal from '../components/OrderConfirmationModal'
-import CartDrawer from '../components/CartDrawer'
-import BillPanel from '../components/BillPanel'
-import MascotAssistantTrigger from '../components/MascotAssistantTrigger'
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { io, type Socket } from "socket.io-client";
+import { CartProvider, useCart } from "../components/CartContext";
+import type {
+  BusinessPlan,
+  MenuCategory,
+  Restaurant,
+} from "../components/types";
+import MenuItemCard from "../components/MenuItemCard";
+import CartSummary from "../components/CartSummary";
+import ChatPanel from "../components/ChatPanel";
+import OrderConfirmationModal from "../components/OrderConfirmationModal";
+import CartDrawer from "../components/CartDrawer";
+import BillPanel from "../components/BillPanel";
+import MascotAssistantTrigger from "../components/MascotAssistantTrigger";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
-let socket: Socket | null = null
+let socket: Socket | null = null;
 
-type OrderStatus = 'new' | 'preparing' | 'ready'
+type OrderStatus = "new" | "preparing" | "ready";
 
 interface MenuResponse {
-  restaurant: Restaurant
-  categories: MenuCategory[]
-  businessPlans?: BusinessPlan[]
+  restaurant: Restaurant;
+  categories: MenuCategory[];
+  businessPlans?: BusinessPlan[];
 }
 
 function WebsiteIcon() {
@@ -31,7 +35,7 @@ function WebsiteIcon() {
         fill="currentColor"
       />
     </svg>
-  )
+  );
 }
 
 function InstagramIcon() {
@@ -42,18 +46,22 @@ function InstagramIcon() {
         fill="currentColor"
       />
     </svg>
-  )
+  );
 }
 
 function FacebookIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="block h-5 w-5 shrink-0 -translate-y-0.5">
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className="block h-5 w-5 shrink-0 -translate-y-0.5"
+    >
       <path
         d="M13.5 21v-7.2h2.4l.36-2.8h-2.76V9.2c0-.81.23-1.36 1.4-1.36H16.5V5.3a21.1 21.1 0 0 0-2.28-.12c-2.25 0-3.78 1.37-3.78 3.9V11H8v2.8h2.44V21h3.06Z"
         fill="currentColor"
       />
     </svg>
-  )
+  );
 }
 
 function SocialIcon() {
@@ -64,181 +72,206 @@ function SocialIcon() {
         fill="currentColor"
       />
     </svg>
-  )
+  );
 }
 
 function getCurrencySymbol(currency?: string) {
-  switch ((currency ?? 'USD').toUpperCase()) {
-    case 'EUR':
-      return '€'
-    case 'GBP':
-      return '£'
-    case 'ILS':
-      return '₪'
-    case 'USD':
+  switch ((currency ?? "USD").toUpperCase()) {
+    case "EUR":
+      return "€";
+    case "GBP":
+      return "£";
+    case "ILS":
+      return "₪";
+    case "USD":
     default:
-      return '$'
+      return "$";
   }
 }
 
 function MenuPageInner() {
-  const { slug } = useParams<{ slug: string }>()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [data, setData] = useState<MenuResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [chatOpen, setChatOpen] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [cartOpen, setCartOpen] = useState(false)
-  const [billOpen, setBillOpen] = useState(false)
-  const [itemDetailOpen, setItemDetailOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [selectedCategoryId, setSelectedCategoryId] = useState<'all' | string>('all')
-  const [socialMenuOpen, setSocialMenuOpen] = useState(false)
-  const [dismissedStatusKey, setDismissedStatusKey] = useState<string | null>(null)
-  const [dismissStatusHydrated, setDismissStatusHydrated] = useState(false)
-  const tableFromUrl = searchParams.get('table') ?? undefined
-  const tableKey = tableFromUrl ?? 'default'
-  const [manualTable, setManualTable] = useState('')
+  const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [data, setData] = useState<MenuResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [billOpen, setBillOpen] = useState(false);
+  const [itemDetailOpen, setItemDetailOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<"all" | string>(
+    "all",
+  );
+  const [socialMenuOpen, setSocialMenuOpen] = useState(false);
+  const [dismissedStatusKey, setDismissedStatusKey] = useState<string | null>(
+    null,
+  );
+  const [dismissStatusHydrated, setDismissStatusHydrated] = useState(false);
+  const tableFromUrl = searchParams.get("table") ?? undefined;
+  const tableKey = tableFromUrl ?? "default";
+  const [manualTable, setManualTable] = useState("");
 
-  const effectiveTable = tableFromUrl
-  const latestOrderIdRef = useRef<string | null>(null)
-  const socialMenuRef = useRef<HTMLDivElement | null>(null)
-  const [latestOrderId, setLatestOrderId] = useState<string | null>(null)
-  const [latestOrderStatus, setLatestOrderStatus] = useState<OrderStatus | null>(null)
+  const effectiveTable = tableFromUrl;
+  const latestOrderIdRef = useRef<string | null>(null);
+  const socialMenuRef = useRef<HTMLDivElement | null>(null);
+  const [latestOrderId, setLatestOrderId] = useState<string | null>(null);
+  const [latestOrderStatus, setLatestOrderStatus] =
+    useState<OrderStatus | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      if (!slug) return
-      setLoading(true)
-      setError(null)
+      if (!slug) return;
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch(`${API_BASE}/api/restaurants/${slug}/menu`)
-        const json = (await res.json()) as MenuResponse & { message?: string }
+        const res = await fetch(`${API_BASE}/api/restaurants/${slug}/menu`);
+        const json = (await res.json()) as MenuResponse & { message?: string };
         if (!res.ok) {
-          throw new Error(json.message ?? 'Failed to load menu')
+          throw new Error(json.message ?? "Failed to load menu");
         }
-        setData(json)
+        setData(json);
       } catch (err) {
-        setError((err as Error).message)
+        setError((err as Error).message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    void load()
-  }, [slug])
+    };
+    void load();
+  }, [slug]);
 
   useEffect(() => {
     const loadLatestOrderStatus = async () => {
       if (!data?.restaurant?._id || !effectiveTable) {
-        latestOrderIdRef.current = null
-        setLatestOrderId(null)
-        setLatestOrderStatus(null)
-        return
+        latestOrderIdRef.current = null;
+        setLatestOrderId(null);
+        setLatestOrderStatus(null);
+        return;
       }
       try {
-        const res = await fetch(`${API_BASE}/api/restaurants/${data.restaurant._id}/orders`)
+        const res = await fetch(
+          `${API_BASE}/api/restaurants/${data.restaurant._id}/orders`,
+        );
         const orders = (await res.json()) as {
-          _id: string
-          status: OrderStatus
-          tableNumber?: string
-        }[]
+          _id: string;
+          status: OrderStatus;
+          tableNumber?: string;
+        }[];
         if (!res.ok) {
-          return
+          return;
         }
-        const forTable = orders.filter((o) => o.tableNumber === effectiveTable)
+        const forTable = orders.filter((o) => o.tableNumber === effectiveTable);
         if (forTable.length === 0) {
-          latestOrderIdRef.current = null
-          setLatestOrderId(null)
-          setLatestOrderStatus(null)
-          return
+          latestOrderIdRef.current = null;
+          setLatestOrderId(null);
+          setLatestOrderStatus(null);
+          return;
         }
-        const latest = forTable[0]
-        latestOrderIdRef.current = latest._id
-        setLatestOrderId(latest._id)
-        setLatestOrderStatus(latest.status)
+        const latest = forTable[0];
+        latestOrderIdRef.current = latest._id;
+        setLatestOrderId(latest._id);
+        setLatestOrderStatus(latest.status);
       } catch {
         // ignore status loading errors on the guest side
       }
-    }
-    void loadLatestOrderStatus()
-  }, [data?.restaurant?._id, effectiveTable])
+    };
+    void loadLatestOrderStatus();
+  }, [data?.restaurant?._id, effectiveTable]);
 
   useEffect(() => {
-    if (!data?.restaurant?._id) return
+    if (!data?.restaurant?._id) return;
 
-    socket = io(API_BASE, { transports: ['websocket'] })
-    socket.emit('join-restaurant', data.restaurant._id)
+    socket = io(API_BASE, { transports: ["websocket"] });
+    socket.emit("join-restaurant", data.restaurant._id);
 
-    socket.on('order:new', (order: { _id: string; status: OrderStatus; tableNumber?: string }) => {
-      if (effectiveTable && order.tableNumber === effectiveTable) {
-        latestOrderIdRef.current = order._id
-        setLatestOrderId(order._id)
-        setLatestOrderStatus(order.status)
-      }
-    })
+    socket.on(
+      "order:new",
+      (order: { _id: string; status: OrderStatus; tableNumber?: string }) => {
+        if (effectiveTable && order.tableNumber === effectiveTable) {
+          latestOrderIdRef.current = order._id;
+          setLatestOrderId(order._id);
+          setLatestOrderStatus(order.status);
+        }
+      },
+    );
 
-    socket.on('order:updated', (payload: { orderId: string; status: OrderStatus }) => {
-      if (latestOrderIdRef.current && latestOrderIdRef.current === payload.orderId) {
-        setLatestOrderStatus(payload.status)
-      }
-    })
+    socket.on(
+      "order:updated",
+      (payload: { orderId: string; status: OrderStatus }) => {
+        if (
+          latestOrderIdRef.current &&
+          latestOrderIdRef.current === payload.orderId
+        ) {
+          setLatestOrderStatus(payload.status);
+        }
+      },
+    );
 
     return () => {
-      socket?.off('order:new')
-      socket?.off('order:updated')
-      socket?.disconnect()
-      socket = null
-    }
-  }, [data?.restaurant?._id, tableFromUrl])
+      socket?.off("order:new");
+      socket?.off("order:updated");
+      socket?.disconnect();
+      socket = null;
+    };
+  }, [data?.restaurant?._id, tableFromUrl]);
 
   useEffect(() => {
-    if (!socialMenuOpen) return
+    if (!socialMenuOpen) return;
 
     const handleOutsideClick = (event: MouseEvent) => {
-      if (socialMenuRef.current && !socialMenuRef.current.contains(event.target as Node)) {
-        setSocialMenuOpen(false)
+      if (
+        socialMenuRef.current &&
+        !socialMenuRef.current.contains(event.target as Node)
+      ) {
+        setSocialMenuOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener("mousedown", handleOutsideClick);
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick)
-    }
-  }, [socialMenuOpen])
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [socialMenuOpen]);
 
   const currentStatusKey =
-    latestOrderId && latestOrderStatus ? `${latestOrderId}:${latestOrderStatus}` : null
-  const shouldShowStatusBanner = currentStatusKey !== null && dismissedStatusKey !== currentStatusKey
-  const statusDismissStorageKey = `ai-waiter:dismissed-order-status:${slug ?? 'unknown'}:${effectiveTable ?? 'default'}`
+    latestOrderId && latestOrderStatus
+      ? `${latestOrderId}:${latestOrderStatus}`
+      : null;
+  const shouldShowStatusBanner =
+    currentStatusKey !== null && dismissedStatusKey !== currentStatusKey;
+  const statusDismissStorageKey = `ai-waiter:dismissed-order-status:${slug ?? "unknown"}:${effectiveTable ?? "default"}`;
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    setDismissStatusHydrated(false)
+    if (typeof window === "undefined") return;
+    setDismissStatusHydrated(false);
     try {
-      const stored = window.localStorage.getItem(statusDismissStorageKey)
-      setDismissedStatusKey(stored ?? null)
+      const stored = window.localStorage.getItem(statusDismissStorageKey);
+      setDismissedStatusKey(stored ?? null);
     } catch {
       // ignore storage read errors
     } finally {
-      setDismissStatusHydrated(true)
+      setDismissStatusHydrated(true);
     }
-  }, [statusDismissStorageKey])
+  }, [statusDismissStorageKey]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (!dismissStatusHydrated) return
+    if (typeof window === "undefined") return;
+    if (!dismissStatusHydrated) return;
     try {
       if (dismissedStatusKey) {
-        window.localStorage.setItem(statusDismissStorageKey, dismissedStatusKey)
+        window.localStorage.setItem(
+          statusDismissStorageKey,
+          dismissedStatusKey,
+        );
       } else {
-        window.localStorage.removeItem(statusDismissStorageKey)
+        window.localStorage.removeItem(statusDismissStorageKey);
       }
     } catch {
       // ignore storage write errors
     }
-  }, [dismissStatusHydrated, dismissedStatusKey, statusDismissStorageKey])
+  }, [dismissStatusHydrated, dismissedStatusKey, statusDismissStorageKey]);
 
   if (loading) {
     return (
@@ -251,7 +284,7 @@ function MenuPageInner() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !data) {
@@ -259,15 +292,17 @@ function MenuPageInner() {
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <div className="mx-auto max-w-md px-4 py-6">
           <h1 className="text-lg font-semibold">Something went wrong</h1>
-          <p className="mt-2 text-sm text-slate-600">{error ?? 'Menu not found.'}</p>
+          <p className="mt-2 text-sm text-slate-600">
+            {error ?? "Menu not found."}
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
-  const currencySymbol = getCurrencySymbol(data.restaurant.currency)
+  const currencySymbol = getCurrencySymbol(data.restaurant.currency);
 
-  const query = searchQuery.trim().toLowerCase()
+  const query = searchQuery.trim().toLowerCase();
   const searchedCategories = query
     ? data.categories
         .map((cat) => ({
@@ -275,21 +310,22 @@ function MenuPageInner() {
           items: cat.items.filter(
             (item) =>
               item.name.toLowerCase().includes(query) ||
-              (item.description && item.description.toLowerCase().includes(query)) ||
-              item.tags?.some((t) => t.toLowerCase().includes(query))
-          )
+              (item.description &&
+                item.description.toLowerCase().includes(query)) ||
+              item.tags?.some((t) => t.toLowerCase().includes(query)),
+          ),
         }))
         .filter((cat) => cat.items.length > 0)
-    : data.categories
+    : data.categories;
 
   const filteredCategories =
-    selectedCategoryId === 'all'
+    selectedCategoryId === "all"
       ? searchedCategories
-      : searchedCategories.filter((cat) => cat._id === selectedCategoryId)
+      : searchedCategories.filter((cat) => cat._id === selectedCategoryId);
 
-  const hasPlans = (data.businessPlans?.length ?? 0) > 0
-  const PLANS_ID = '__business_plans__'
-  const hasMultipleCategories = data.categories.length > 1 || hasPlans
+  const hasPlans = (data.businessPlans?.length ?? 0) > 0;
+  const PLANS_ID = "__business_plans__";
+  const hasMultipleCategories = data.categories.length > 1 || hasPlans;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 text-slate-900">
@@ -301,21 +337,26 @@ function MenuPageInner() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-2xl">
                 🪑
               </div>
-              <h2 className="text-lg font-bold text-slate-900">Which table are you at?</h2>
+              <h2 className="text-lg font-bold text-slate-900">
+                Which table are you at?
+              </h2>
               <p className="text-sm text-slate-500">
                 Enter your table number to place orders and track your meal.
               </p>
             </div>
             <form
               onSubmit={(e: FormEvent<HTMLFormElement>) => {
-                e.preventDefault()
-                const trimmed = manualTable.trim()
-                if (!trimmed) return
-                setSearchParams((prev) => {
-                  const next = new URLSearchParams(prev)
-                  next.set('table', trimmed)
-                  return next
-                }, { replace: true })
+                e.preventDefault();
+                const trimmed = manualTable.trim();
+                if (!trimmed) return;
+                setSearchParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.set("table", trimmed);
+                    return next;
+                  },
+                  { replace: true },
+                );
               }}
             >
               <input
@@ -344,7 +385,9 @@ function MenuPageInner() {
 
       <div className="mx-auto max-w-md px-4 pb-4 pt-6">
         <header className="relative z-30 mb-4 px-3 pt-1 text-center">
-          {(data.restaurant.websiteUrl || data.restaurant.instagramUrl || data.restaurant.facebookUrl) && (
+          {(data.restaurant.websiteUrl ||
+            data.restaurant.instagramUrl ||
+            data.restaurant.facebookUrl) && (
             <div ref={socialMenuRef} className="absolute right-0 top-1">
               <button
                 type="button"
@@ -407,39 +450,45 @@ function MenuPageInner() {
               />
             </div>
           )}
-          {shouldShowStatusBanner && latestOrderStatus === 'new' && (
+          {shouldShowStatusBanner && latestOrderStatus === "new" && (
             <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-800">
               <p>Your order was sent to the kitchen.</p>
               <button
                 type="button"
                 aria-label="Dismiss order status"
-                onClick={() => currentStatusKey && setDismissedStatusKey(currentStatusKey)}
+                onClick={() =>
+                  currentStatusKey && setDismissedStatusKey(currentStatusKey)
+                }
                 className="rounded p-0.5 text-amber-700 transition-colors hover:bg-amber-100 hover:text-amber-900"
               >
                 ×
               </button>
             </div>
           )}
-          {shouldShowStatusBanner && latestOrderStatus === 'preparing' && (
+          {shouldShowStatusBanner && latestOrderStatus === "preparing" && (
             <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-sky-50 px-2.5 py-1.5 text-[11px] font-medium text-sky-800">
               <p>Your order is being prepared.</p>
               <button
                 type="button"
                 aria-label="Dismiss order status"
-                onClick={() => currentStatusKey && setDismissedStatusKey(currentStatusKey)}
+                onClick={() =>
+                  currentStatusKey && setDismissedStatusKey(currentStatusKey)
+                }
                 className="rounded p-0.5 text-sky-700 transition-colors hover:bg-sky-100 hover:text-sky-900"
               >
                 ×
               </button>
             </div>
           )}
-          {shouldShowStatusBanner && latestOrderStatus === 'ready' && (
+          {shouldShowStatusBanner && latestOrderStatus === "ready" && (
             <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-emerald-50 px-2.5 py-1.5 text-[11px] font-medium text-emerald-800">
               <p>Your order is ready.</p>
               <button
                 type="button"
                 aria-label="Dismiss order status"
-                onClick={() => currentStatusKey && setDismissedStatusKey(currentStatusKey)}
+                onClick={() =>
+                  currentStatusKey && setDismissedStatusKey(currentStatusKey)
+                }
                 className="rounded p-0.5 text-emerald-700 transition-colors hover:bg-emerald-100 hover:text-emerald-900"
               >
                 ×
@@ -481,8 +530,8 @@ function MenuPageInner() {
               <button
                 type="button"
                 onClick={() => {
-                  setSearchOpen(false)
-                  setSearchQuery('')
+                  setSearchOpen(false);
+                  setSearchQuery("");
                 }}
                 className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:border-slate-300"
               >
@@ -495,11 +544,11 @@ function MenuPageInner() {
               <nav className="scrollbar-hide flex gap-1.5 overflow-x-auto pb-1 pt-0.5">
                 <button
                   type="button"
-                  onClick={() => setSelectedCategoryId('all')}
+                  onClick={() => setSelectedCategoryId("all")}
                   className={`flex-shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                    selectedCategoryId === 'all'
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                    selectedCategoryId === "all"
+                      ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                   }`}
                 >
                   All
@@ -510,8 +559,8 @@ function MenuPageInner() {
                     onClick={() => setSelectedCategoryId(PLANS_ID)}
                     className={`flex-shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors ${
                       selectedCategoryId === PLANS_ID
-                        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                     }`}
                   >
                     עסקיות
@@ -524,8 +573,8 @@ function MenuPageInner() {
                     onClick={() => setSelectedCategoryId(cat._id)}
                     className={`flex-shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors ${
                       selectedCategoryId === cat._id
-                        ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                        ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                     }`}
                   >
                     {cat.name}
@@ -564,13 +613,18 @@ function MenuPageInner() {
               />
             </section>
           )}
-          {filteredCategories.length === 0 && selectedCategoryId !== PLANS_ID ? (
+          {filteredCategories.length === 0 &&
+          selectedCategoryId !== PLANS_ID ? (
             <p className="py-6 text-center text-sm text-slate-500">
               No items match &quot;{searchQuery}&quot;. Try a different search.
             </p>
           ) : selectedCategoryId === PLANS_ID ? null : (
             filteredCategories.map((cat) => (
-              <section key={cat._id} id={`cat-${cat._id}`} className="scroll-mt-24">
+              <section
+                key={cat._id}
+                id={`cat-${cat._id}`}
+                className="scroll-mt-24"
+              >
                 <h2 className="mb-2 text-sm font-semibold tracking-wide text-slate-800 uppercase">
                   {cat.name}
                 </h2>
@@ -606,8 +660,8 @@ function MenuPageInner() {
                 currencySymbol={currencySymbol}
                 variant="dark"
                 onOpenCart={() => {
-                  setChatOpen(false)
-                  setCartOpen(true)
+                  setChatOpen(false);
+                  setCartOpen(true);
                 }}
               />
             </div>
@@ -619,18 +673,18 @@ function MenuPageInner() {
           mode="floating"
           active={chatOpen}
           onClick={() => {
-            setCartOpen(false)
-            setChatOpen((prev) => !prev)
+            setCartOpen(false);
+            setChatOpen((prev) => !prev);
           }}
-          label={chatOpen ? 'Close Servo assistant' : 'Talk to Servo assistant'}
+          label={chatOpen ? "Close Servo assistant" : "Talk to Servo assistant"}
         />
       )}
       <CartDrawer
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         onConfirmOrder={() => {
-          setCartOpen(false)
-          setConfirmOpen(true)
+          setCartOpen(false);
+          setConfirmOpen(true);
         }}
         restaurantId={data.restaurant._id}
         currencySymbol={currencySymbol}
@@ -665,7 +719,7 @@ function MenuPageInner() {
         />
       )}
     </div>
-  )
+  );
 }
 
 export default function MenuPage() {
@@ -673,28 +727,28 @@ export default function MenuPage() {
     <CartProvider>
       <MenuPageInner />
     </CartProvider>
-  )
+  );
 }
 
 function BusinessPlansSection({
   plans,
   currencySymbol,
 }: {
-  plans: BusinessPlan[]
-  currencySymbol: string
+  plans: BusinessPlan[];
+  currencySymbol: string;
 }) {
-  const { addItem } = useCart()
+  const { addItem } = useCart();
 
   const handleAddPlanToCart = (plan: BusinessPlan) => {
-    if (!plan.items.length) return
+    if (!plan.items.length) return;
     addItem(
       {
         _id: `business-plan:${plan._id}`,
-        name: plan.name || 'Business meal',
-        description: plan.description ?? '',
+        name: plan.name || "Business meal",
+        description: plan.description ?? "",
         price: plan.price,
         allergens: [],
-        tags: ['Business meal'],
+        tags: ["Business meal"],
         imageUrl: undefined,
       },
       1,
@@ -704,42 +758,49 @@ function BusinessPlansSection({
           menuItemId: entry._id,
           quantity: entry.quantity && entry.quantity > 0 ? entry.quantity : 1,
         })),
-      }
-    )
-  }
+      },
+    );
+  };
 
-  if (!plans.length) return null
+  if (!plans.length) return null;
 
-  const now = new Date()
+  const now = new Date();
 
   return (
     <section>
       <div className="mb-2 flex items-center gap-2">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-800 uppercase">עסקיות</h2>
+        <h2 className="text-sm font-semibold tracking-wide text-slate-800 uppercase">
+          עסקיות
+        </h2>
         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
           Special deal
         </span>
       </div>
       <div className="space-y-3">
         {plans.map((plan) => {
-          const available = isBusinessPlanCurrentlyAvailable(plan.timeNote ?? '', now)
+          const available = isBusinessPlanCurrentlyAvailable(
+            plan.timeNote ?? "",
+            now,
+          );
           return (
             <div
               key={plan._id}
               className={`overflow-hidden rounded-2xl border transition ${
                 available
-                  ? 'border-slate-200 bg-white shadow-sm'
-                  : 'border-slate-100 bg-slate-50 opacity-60'
+                  ? "border-slate-200 bg-white shadow-sm"
+                  : "border-slate-100 bg-slate-50 opacity-60"
               }`}
             >
               {/* Card header: name + price + availability badge */}
               <div className="flex items-start justify-between gap-3 px-4 pt-3.5 pb-2">
                 <div className="min-w-0">
                   <h3 className="text-base font-bold text-slate-900 leading-tight">
-                    {plan.name || 'עסקית'}
+                    {plan.name || "עסקית"}
                   </h3>
                   {plan.timeNote && (
-                    <p className="mt-0.5 text-[11px] text-slate-500">{plan.timeNote}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      {plan.timeNote}
+                    </p>
                   )}
                   {!available && (
                     <span className="mt-1 inline-block rounded-full bg-slate-200 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
@@ -749,7 +810,8 @@ function BusinessPlansSection({
                 </div>
                 <div className="shrink-0 text-right">
                   <span className="text-xl font-bold text-slate-900 tabular-nums">
-                    {currencySymbol}{plan.price.toFixed(2)}
+                    {currencySymbol}
+                    {plan.price.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -770,7 +832,9 @@ function BusinessPlansSection({
                       className="inline-flex items-center gap-1 rounded-full border border-slate-100 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600"
                     >
                       {item.quantity > 1 && (
-                        <span className="font-bold text-slate-800">{item.quantity}×</span>
+                        <span className="font-bold text-slate-800">
+                          {item.quantity}×
+                        </span>
                       )}
                       {item.name}
                     </span>
@@ -784,102 +848,104 @@ function BusinessPlansSection({
                   type="button"
                   disabled={!available}
                   onClick={() => {
-                    if (!available) return
-                    handleAddPlanToCart(plan)
+                    if (!available) return;
+                    handleAddPlanToCart(plan);
                   }}
                   className={`w-full rounded-xl py-2.5 text-sm font-semibold transition ${
                     available
-                      ? 'bg-slate-900 text-white hover:bg-slate-700'
-                      : 'cursor-not-allowed bg-slate-200 text-slate-400'
+                      ? "bg-slate-900 text-white hover:bg-slate-700"
+                      : "cursor-not-allowed bg-slate-200 text-slate-400"
                   }`}
                 >
-                  {available ? 'Add to order' : 'Not available'}
+                  {available ? "Add to order" : "Not available"}
                 </button>
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </section>
-  )
+  );
 }
 
-function isBusinessPlanCurrentlyAvailable(timeNote: string, now: Date): boolean {
-  const trimmed = timeNote.trim()
-  if (!trimmed) return true
+function isBusinessPlanCurrentlyAvailable(
+  timeNote: string,
+  now: Date,
+): boolean {
+  const trimmed = timeNote.trim();
+  if (!trimmed) return true;
 
-  const day = now.getDay() // 0-6, Sun-Sat
-  const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes()
+  const day = now.getDay(); // 0-6, Sun-Sat
+  const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
 
   const parseTime = (t: string): number | null => {
-    const [h, m] = t.split(':')
-    const hh = Number(h)
-    const mm = Number(m ?? '0')
-    if (Number.isNaN(hh) || Number.isNaN(mm)) return null
-    return hh * 60 + mm
-  }
+    const [h, m] = t.split(":");
+    const hh = Number(h);
+    const mm = Number(m ?? "0");
+    if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+    return hh * 60 + mm;
+  };
 
   const dayIndexFromToken = (token: string): number | null => {
-    const lower = token.toLowerCase()
-    if (lower.startsWith('sun')) return 0
-    if (lower.startsWith('mon')) return 1
-    if (lower.startsWith('tue')) return 2
-    if (lower.startsWith('wed')) return 3
-    if (lower.startsWith('thu')) return 4
-    if (lower.startsWith('fri')) return 5
-    if (lower.startsWith('sat')) return 6
-    if (lower.startsWith('weekday')) return -1 // special handled below
-    return null
-  }
+    const lower = token.toLowerCase();
+    if (lower.startsWith("sun")) return 0;
+    if (lower.startsWith("mon")) return 1;
+    if (lower.startsWith("tue")) return 2;
+    if (lower.startsWith("wed")) return 3;
+    if (lower.startsWith("thu")) return 4;
+    if (lower.startsWith("fri")) return 5;
+    if (lower.startsWith("sat")) return 6;
+    if (lower.startsWith("weekday")) return -1; // special handled below
+    return null;
+  };
 
-  const normalize = trimmed
-    .replace(/\s+/g, ' ')
-    .replace(/[–—]/g, '-')
+  const normalize = trimmed.replace(/\s+/g, " ").replace(/[–—]/g, "-");
 
   // Expect something like "Sun-Thu 12:00-16:00" or "Weekdays 11:30-16:00"
-  const match = normalize.match(/^([^0-9]+)\s+(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/)
+  const match = normalize.match(
+    /^([^0-9]+)\s+(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/,
+  );
   if (!match) {
     // If we can't confidently parse, don't block the plan.
-    return true
+    return true;
   }
 
-  const dayPart = match[1].trim()
-  const startStr = match[2]
-  const endStr = match[3]
+  const dayPart = match[1].trim();
+  const startStr = match[2];
+  const endStr = match[3];
 
-  const startMinutes = parseTime(startStr)
-  const endMinutes = parseTime(endStr)
-  if (startMinutes == null || endMinutes == null) return true
+  const startMinutes = parseTime(startStr);
+  const endMinutes = parseTime(endStr);
+  if (startMinutes == null || endMinutes == null) return true;
 
-  const days: number[] = []
-  const segments = dayPart.split(',').map((s) => s.trim())
+  const days: number[] = [];
+  const segments = dayPart.split(",").map((s) => s.trim());
 
   for (const seg of segments) {
-    if (!seg) continue
+    if (!seg) continue;
     if (/^weekdays?/i.test(seg)) {
       // Mon-Fri
-      days.push(1, 2, 3, 4, 5)
-      continue
+      days.push(1, 2, 3, 4, 5);
+      continue;
     }
-    const [fromToken, toToken] = seg.split('-').map((s) => s.trim())
-    const fromIdx = dayIndexFromToken(fromToken)
-    const toIdx = toToken ? dayIndexFromToken(toToken) : fromIdx
-    if (fromIdx == null || toIdx == null) continue
+    const [fromToken, toToken] = seg.split("-").map((s) => s.trim());
+    const fromIdx = dayIndexFromToken(fromToken);
+    const toIdx = toToken ? dayIndexFromToken(toToken) : fromIdx;
+    if (fromIdx == null || toIdx == null) continue;
     if (fromIdx <= toIdx) {
-      for (let d = fromIdx; d <= toIdx; d++) days.push(d)
+      for (let d = fromIdx; d <= toIdx; d++) days.push(d);
     } else {
       // e.g. Fri-Mon
-      for (let d = fromIdx; d <= 6; d++) days.push(d)
-      for (let d = 0; d <= toIdx; d++) days.push(d)
+      for (let d = fromIdx; d <= 6; d++) days.push(d);
+      for (let d = 0; d <= toIdx; d++) days.push(d);
     }
   }
 
-  if (!days.length) return true
+  if (!days.length) return true;
 
   return (
     days.includes(day) &&
     minutesSinceMidnight >= startMinutes &&
     minutesSinceMidnight <= endMinutes
-  )
+  );
 }
-

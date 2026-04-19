@@ -1,10 +1,10 @@
-import type { PendingDelete } from './types'
+import type { PendingDelete } from "./types";
 
 interface DeleteConfirmModalProps {
-  pendingDelete: PendingDelete
-  saving: boolean
-  onCancel: () => void
-  onConfirm: () => void
+  pendingDelete: PendingDelete;
+  saving: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
 }
 
 export function DeleteConfirmModal({
@@ -18,7 +18,7 @@ export function DeleteConfirmModal({
       <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-xl my-auto">
         <h2 className="text-sm font-semibold text-slate-900">Confirm delete</h2>
         <p className="mt-2 text-xs text-slate-700">
-          {pendingDelete.type === 'category'
+          {pendingDelete.type === "category"
             ? `Delete category "${pendingDelete.name}" and all its items?`
             : `Delete item "${pendingDelete.name}"?`}
         </p>
@@ -42,5 +42,5 @@ export function DeleteConfirmModal({
         </div>
       </div>
     </div>
-  )
+  );
 }
