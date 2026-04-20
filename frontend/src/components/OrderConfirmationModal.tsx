@@ -1,14 +1,14 @@
-import { useCart } from './CartContext'
-import { useState } from 'react'
+import { useCart } from "./CartContext";
+import { useState } from "react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
 interface Props {
-  restaurantId: string
-  open: boolean
-  onClose: () => void
-  onConfirmed: () => void
-  initialTable?: string
+  restaurantId: string;
+  open: boolean;
+  onClose: () => void;
+  onConfirmed: () => void;
+  initialTable?: string;
 }
 
 export default function OrderConfirmationModal({
@@ -17,23 +17,23 @@ export default function OrderConfirmationModal({
   onClose,
   onConfirmed,
   initialTable,
-  currencySymbol = '$',
+  currencySymbol = "$",
 }: Props & { currencySymbol?: string }) {
-  const { items, totalPrice, clear } = useCart()
-  const [tableNumber, setTableNumber] = useState(initialTable ?? '')
-  const [notes, setNotes] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { items, totalPrice, clear } = useCart();
+  const [tableNumber, setTableNumber] = useState(initialTable ?? "");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!open) return null
+  if (!open) return null;
 
   const submitOrder = async () => {
-    setSubmitting(true)
-    setError(null)
+    setSubmitting(true);
+    setError(null);
     try {
       const res = await fetch(`${API_BASE}/api/orders`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           restaurantId,
           tableNumber: tableNumber || undefined,
@@ -44,26 +44,28 @@ export default function OrderConfirmationModal({
             notes: item.notes,
           })),
         }),
-      })
-      const data = (await res.json()) as { orderId?: string; message?: string }
+      });
+      const data = (await res.json()) as { orderId?: string; message?: string };
       if (!res.ok) {
-        throw new Error(data.message ?? 'Failed to submit order')
+        throw new Error(data.message ?? "Failed to submit order");
       }
-      clear()
-      onConfirmed()
-      onClose()
+      clear();
+      onConfirmed();
+      onClose();
     } catch (err) {
-      setError((err as Error).message)
+      setError((err as Error).message);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 z-40 flex items-end bg-black/40 sm:items-center">
       <div className="w-full rounded-t-3xl bg-white p-4 sm:mx-auto sm:max-w-md sm:rounded-3xl sm:border sm:border-slate-200 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">Review your order</h2>
+          <h2 className="text-sm font-semibold text-slate-900">
+            Review your order
+          </h2>
           <button
             type="button"
             className="text-xs text-slate-500 hover:text-slate-800"
@@ -79,7 +81,11 @@ export default function OrderConfirmationModal({
                 <div className="font-medium text-slate-900">
                   {item.quantity} × {item.name}
                 </div>
-                {item.notes && <div className="text-[10px] text-slate-500">Note: {item.notes}</div>}
+                {item.notes && (
+                  <div className="text-[10px] text-slate-500">
+                    Note: {item.notes}
+                  </div>
+                )}
               </div>
               <div className="text-right text-slate-900">
                 {currencySymbol}
@@ -122,11 +128,10 @@ export default function OrderConfirmationModal({
             disabled={submitting}
             onClick={() => void submitOrder()}
           >
-            {submitting ? 'Sending…' : 'Send to kitchen'}
+            {submitting ? "Sending…" : "Send to kitchen"}
           </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
-

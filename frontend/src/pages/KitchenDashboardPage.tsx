@@ -1,295 +1,346 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { io, type Socket } from 'socket.io-client'
-import KitchenOrderCard, { type KitchenOrder } from '../components/KitchenOrderCard'
-import emptyCartIllustration from '../assets/empty-cart-illustration.png'
-import { useAuth } from '../components/AuthContext'
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { io, type Socket } from "socket.io-client";
+import KitchenOrderCard, {
+  type KitchenOrder,
+} from "../components/KitchenOrderCard";
+import emptyCartIllustration from "../assets/empty-cart-illustration.png";
+import { useAuth } from "../components/AuthContext";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
-let socket: Socket | null = null
+let socket: Socket | null = null;
 
 interface WaiterCall {
-  _id: string
-  restaurantId: string
-  tableNumber?: string
-  notes?: string
-  status: 'open' | 'handled'
-  createdAt: string
+  _id: string;
+  restaurantId: string;
+  tableNumber?: string;
+  notes?: string;
+  status: "open" | "handled";
+  createdAt: string;
 }
 
 interface RestaurantTable {
-  _id: string
-  restaurantId: string
-  name: string
-  number: string
-  status: 'active' | 'inactive'
+  _id: string;
+  restaurantId: string;
+  name: string;
+  number: string;
+  status: "active" | "inactive";
 }
 
 export default function KitchenDashboardPage() {
-  const { restaurantId } = useParams<{ restaurantId: string }>()
-  const { restaurant } = useAuth()
-  const [orders, setOrders] = useState<KitchenOrder[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [waiterCalls, setWaiterCalls] = useState<WaiterCall[]>([])
-  const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>([])
-  const [activeTab, setActiveTab] = useState<'orders' | 'tables' | 'history'>(() => {
-    if (typeof window === 'undefined') return 'orders'
-    const key = restaurantId ? `kitchenActiveTab:${restaurantId}` : 'kitchenActiveTab'
-    const saved = window.localStorage.getItem(key)
-    if (saved === 'orders' || saved === 'tables' || saved === 'history') {
-      return saved
-    }
-    return 'orders'
-  })
-  const [createTableOpen, setCreateTableOpen] = useState(false)
-  const [newTableNumber, setNewTableNumber] = useState('')
-  const [newTableName, setNewTableName] = useState('')
-  const [creatingTable, setCreatingTable] = useState(false)
-  const [createTableError, setCreateTableError] = useState<string | null>(null)
-  const [bulkCreateOpen, setBulkCreateOpen] = useState(false)
-  const [bulkStartNumber, setBulkStartNumber] = useState('')
-  const [bulkEndNumber, setBulkEndNumber] = useState('')
-  const [bulkCreating, setBulkCreating] = useState(false)
-  const [bulkCreateError, setBulkCreateError] = useState<string | null>(null)
-  const [historyOrders, setHistoryOrders] = useState<KitchenOrder[]>([])
+  const { restaurantId } = useParams<{ restaurantId: string }>();
+  const { restaurant } = useAuth();
+  const [orders, setOrders] = useState<KitchenOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [waiterCalls, setWaiterCalls] = useState<WaiterCall[]>([]);
+  const [restaurantTables, setRestaurantTables] = useState<RestaurantTable[]>(
+    [],
+  );
+  const [activeTab, setActiveTab] = useState<"orders" | "tables" | "history">(
+    () => {
+      if (typeof window === "undefined") return "orders";
+      const key = restaurantId
+        ? `kitchenActiveTab:${restaurantId}`
+        : "kitchenActiveTab";
+      const saved = window.localStorage.getItem(key);
+      if (saved === "orders" || saved === "tables" || saved === "history") {
+        return saved;
+      }
+      return "orders";
+    },
+  );
+  const [createTableOpen, setCreateTableOpen] = useState(false);
+  const [newTableNumber, setNewTableNumber] = useState("");
+  const [newTableName, setNewTableName] = useState("");
+  const [creatingTable, setCreatingTable] = useState(false);
+  const [createTableError, setCreateTableError] = useState<string | null>(null);
+  const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
+  const [bulkStartNumber, setBulkStartNumber] = useState("");
+  const [bulkEndNumber, setBulkEndNumber] = useState("");
+  const [bulkCreating, setBulkCreating] = useState(false);
+  const [bulkCreateError, setBulkCreateError] = useState<string | null>(null);
+  const [historyOrders, setHistoryOrders] = useState<KitchenOrder[]>([]);
   const [historyLoading, setHistoryLoading] = useState(() => {
-    if (typeof window === 'undefined') return false
-    const key = restaurantId ? `kitchenActiveTab:${restaurantId}` : 'kitchenActiveTab'
-    return window.localStorage.getItem(key) === 'history'
-  })
-  const [historyError, setHistoryError] = useState<string | null>(null)
-  const [tablesLoading, setTablesLoading] = useState(true)
-  const [historyTableNumber, setHistoryTableNumber] = useState<string>('')
-  const [historyStatus, setHistoryStatus] = useState<'all' | 'new' | 'preparing' | 'ready'>('all')
-  const [historyFrom, setHistoryFrom] = useState<string>('')
-  const [historyTo, setHistoryTo] = useState<string>('')
-  const [collapsedTables, setCollapsedTables] = useState<Set<string>>(new Set())
-  const [selectedTableKeys, setSelectedTableKeys] = useState<Set<string>>(new Set())
-  const [mergedClearLoading, setMergedClearLoading] = useState(false)
+    if (typeof window === "undefined") return false;
+    const key = restaurantId
+      ? `kitchenActiveTab:${restaurantId}`
+      : "kitchenActiveTab";
+    return window.localStorage.getItem(key) === "history";
+  });
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [tablesLoading, setTablesLoading] = useState(true);
+  const [historyTableNumber, setHistoryTableNumber] = useState<string>("");
+  const [historyStatus, setHistoryStatus] = useState<
+    "all" | "new" | "preparing" | "ready"
+  >("all");
+  const [historyFrom, setHistoryFrom] = useState<string>("");
+  const [historyTo, setHistoryTo] = useState<string>("");
+  const [collapsedTables, setCollapsedTables] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedTableKeys, setSelectedTableKeys] = useState<Set<string>>(
+    new Set(),
+  );
+  const [mergedClearLoading, setMergedClearLoading] = useState(false);
 
   const toggleTableCollapsed = (tableKey: string) => {
     setCollapsedTables((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(tableKey)) {
-        next.delete(tableKey)
+        next.delete(tableKey);
       } else {
-        next.add(tableKey)
+        next.add(tableKey);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   const toggleTableSelected = (tableKey: string) => {
     setSelectedTableKeys((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(tableKey)) {
-        next.delete(tableKey)
+        next.delete(tableKey);
       } else {
-        next.add(tableKey)
+        next.add(tableKey);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   // Persist merged table selection so guest bill panels can show a combined bill
   useEffect(() => {
-    if (!restaurantId || activeTab !== 'tables') return
-    const controller = new AbortController()
+    if (!restaurantId || activeTab !== "tables") return;
+    const controller = new AbortController();
 
     const syncMerge = async () => {
       try {
-        const tableNumbers: string[] = []
+        const tableNumbers: string[] = [];
         selectedTableKeys.forEach((key) => {
-          if (key === 'no-table') return
-          tableNumbers.push(key)
-        })
+          if (key === "no-table") return;
+          tableNumbers.push(key);
+        });
 
-        await fetch(`${API_BASE}/api/restaurants/${restaurantId}/merged-tables`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tables: tableNumbers }),
-          signal: controller.signal,
-        })
+        await fetch(
+          `${API_BASE}/api/restaurants/${restaurantId}/merged-tables`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tables: tableNumbers }),
+            signal: controller.signal,
+          },
+        );
       } catch {
         // ignore background sync errors
       }
-    }
+    };
 
-    void syncMerge()
+    void syncMerge();
 
     return () => {
-      controller.abort()
-    }
-  }, [restaurantId, activeTab, selectedTableKeys])
+      controller.abort();
+    };
+  }, [restaurantId, activeTab, selectedTableKeys]);
 
   useEffect(() => {
-    if (!restaurantId) return
+    if (!restaurantId) return;
     try {
-      window.localStorage.setItem(`kitchenActiveTab:${restaurantId}`, activeTab)
+      window.localStorage.setItem(
+        `kitchenActiveTab:${restaurantId}`,
+        activeTab,
+      );
     } catch {
       // ignore localStorage errors
     }
-  }, [activeTab, restaurantId])
+  }, [activeTab, restaurantId]);
 
   useEffect(() => {
     const load = async () => {
-      if (!restaurantId) return
-      setLoading(true)
-      setError(null)
+      if (!restaurantId) return;
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/orders`)
-        const data = (await res.json()) as KitchenOrder[] & { message?: string }
+        const res = await fetch(
+          `${API_BASE}/api/restaurants/${restaurantId}/orders`,
+        );
+        const data = (await res.json()) as KitchenOrder[] & {
+          message?: string;
+        };
         if (!res.ok) {
-          throw new Error(data.message ?? 'Failed to load orders')
+          throw new Error(data.message ?? "Failed to load orders");
         }
-        setOrders(data)
+        setOrders(data);
         const waiterRes = await fetch(
-          `${API_BASE}/api/restaurants/${restaurantId}/waiter-calls`
-        )
-        const waiterData = (await waiterRes.json()) as WaiterCall[] & { message?: string }
+          `${API_BASE}/api/restaurants/${restaurantId}/waiter-calls`,
+        );
+        const waiterData = (await waiterRes.json()) as WaiterCall[] & {
+          message?: string;
+        };
         if (!waiterRes.ok) {
-          throw new Error(waiterData.message ?? 'Failed to load waiter calls')
+          throw new Error(waiterData.message ?? "Failed to load waiter calls");
         }
-        setWaiterCalls(waiterData)
+        setWaiterCalls(waiterData);
       } catch (err) {
-        setError((err as Error).message)
+        setError((err as Error).message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    void load()
-  }, [restaurantId])
+    };
+    void load();
+  }, [restaurantId]);
 
   // Lightweight polling as a safety net in case sockets fail
   useEffect(() => {
-    if (!restaurantId || activeTab !== 'orders') return
+    if (!restaurantId || activeTab !== "orders") return;
 
     const intervalId = window.setInterval(async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/orders`)
-        const data = (await res.json()) as KitchenOrder[] & { message?: string }
+        const res = await fetch(
+          `${API_BASE}/api/restaurants/${restaurantId}/orders`,
+        );
+        const data = (await res.json()) as KitchenOrder[] & {
+          message?: string;
+        };
         if (res.ok) {
-          setOrders(data)
+          setOrders(data);
         }
         const waiterRes = await fetch(
-          `${API_BASE}/api/restaurants/${restaurantId}/waiter-calls`
-        )
-        const waiterData = (await waiterRes.json()) as WaiterCall[] & { message?: string }
+          `${API_BASE}/api/restaurants/${restaurantId}/waiter-calls`,
+        );
+        const waiterData = (await waiterRes.json()) as WaiterCall[] & {
+          message?: string;
+        };
         if (waiterRes.ok) {
-          setWaiterCalls(waiterData)
+          setWaiterCalls(waiterData);
         }
       } catch {
         // ignore background polling errors
       }
-    }, 4000)
+    }, 4000);
 
     return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [restaurantId, activeTab])
+      window.clearInterval(intervalId);
+    };
+  }, [restaurantId, activeTab]);
 
   useEffect(() => {
     const loadTables = async () => {
-      if (!restaurantId) return
-      setTablesLoading(true)
+      if (!restaurantId) return;
+      setTablesLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/tables`)
-        const data = (await res.json()) as RestaurantTable[] & { message?: string }
+        const res = await fetch(
+          `${API_BASE}/api/restaurants/${restaurantId}/tables`,
+        );
+        const data = (await res.json()) as RestaurantTable[] & {
+          message?: string;
+        };
         if (!res.ok) {
-          throw new Error(data.message ?? 'Failed to load tables')
+          throw new Error(data.message ?? "Failed to load tables");
         }
-        setRestaurantTables(data)
+        setRestaurantTables(data);
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error(err)
+        console.error(err);
       } finally {
-        setTablesLoading(false)
+        setTablesLoading(false);
       }
-    }
-    void loadTables()
-  }, [restaurantId])
+    };
+    void loadTables();
+  }, [restaurantId]);
 
   useEffect(() => {
-    if (!restaurantId) return
+    if (!restaurantId) return;
 
-    socket = io(API_BASE, { transports: ['websocket'] })
-    socket.emit('join-restaurant', restaurantId)
+    socket = io(API_BASE, { transports: ["websocket"] });
+    socket.emit("join-restaurant", restaurantId);
 
-    socket.on('order:new', (order: KitchenOrder) => {
-      setOrders((prev) => [order, ...prev])
-    })
+    socket.on("order:new", (order: KitchenOrder) => {
+      setOrders((prev) => [order, ...prev]);
+    });
 
-    socket.on('order:updated', (payload: { orderId: string; status: KitchenOrder['status'] }) => {
-      setOrders((prev) =>
-        prev.map((o) => (o._id === payload.orderId ? { ...o, status: payload.status } : o))
-      )
-    })
+    socket.on(
+      "order:updated",
+      (payload: { orderId: string; status: KitchenOrder["status"] }) => {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o._id === payload.orderId ? { ...o, status: payload.status } : o,
+          ),
+        );
+      },
+    );
 
-    socket.on('waiter:call', (payload: WaiterCall) => {
-      setWaiterCalls((prev) => [payload, ...prev])
-    })
+    socket.on("waiter:call", (payload: WaiterCall) => {
+      setWaiterCalls((prev) => [payload, ...prev]);
+    });
 
-    socket.on('waiter:call:handled', (payload: { callId: string }) => {
-      setWaiterCalls((prev) => prev.filter((call) => call._id !== payload.callId))
-    })
+    socket.on("waiter:call:handled", (payload: { callId: string }) => {
+      setWaiterCalls((prev) =>
+        prev.filter((call) => call._id !== payload.callId),
+      );
+    });
 
     return () => {
-      socket?.off('order:new')
-      socket?.off('order:updated')
-      socket?.off('waiter:call')
-      socket?.off('waiter:call:handled')
-      socket?.disconnect()
-      socket = null
-    }
-  }, [restaurantId])
+      socket?.off("order:new");
+      socket?.off("order:updated");
+      socket?.off("waiter:call");
+      socket?.off("waiter:call:handled");
+      socket?.disconnect();
+      socket = null;
+    };
+  }, [restaurantId]);
 
-  const changeStatus = async (orderId: string, status: KitchenOrder['status']) => {
+  const changeStatus = async (
+    orderId: string,
+    status: KitchenOrder["status"],
+  ) => {
     try {
       const res = await fetch(`${API_BASE}/api/orders/${orderId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
-      })
+      });
       if (!res.ok) {
-        throw new Error('Failed to update status')
+        throw new Error("Failed to update status");
       }
       setOrders((prev) =>
-        prev.map((o) => (o._id === orderId ? { ...o, status } : o))
-      )
+        prev.map((o) => (o._id === orderId ? { ...o, status } : o)),
+      );
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error(err)
+      console.error(err);
     }
-  }
+  };
 
   const markWaiterCallHandled = async (callId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/waiter-calls/${callId}/handled`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      const res = await fetch(
+        `${API_BASE}/api/waiter-calls/${callId}/handled`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+        },
+      );
       if (!res.ok) {
-        throw new Error('Failed to mark waiter call as handled')
+        throw new Error("Failed to mark waiter call as handled");
       }
-      setWaiterCalls((prev) => prev.filter((call) => call._id !== callId))
+      setWaiterCalls((prev) => prev.filter((call) => call._id !== callId));
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error(err)
+      console.error(err);
     }
-  }
+  };
 
   const tables = useMemo(() => {
     const byKey = new Map<
       string,
       {
-        key: string
-        label: string
-        orders: KitchenOrder[]
-        waiterCalls: WaiterCall[]
+        key: string;
+        label: string;
+        orders: KitchenOrder[];
+        waiterCalls: WaiterCall[];
       }
-    >()
+    >();
 
     restaurantTables.forEach((table) => {
       byKey.set(table.number, {
@@ -297,289 +348,307 @@ export default function KitchenDashboardPage() {
         label: table.name || `Table ${table.number}`,
         orders: [],
         waiterCalls: [],
-      })
-    })
+      });
+    });
 
     const ensureTable = (key: string, tableNumber?: string) => {
       if (!byKey.has(key)) {
         byKey.set(key, {
           key,
-          label: tableNumber ? `Table ${tableNumber}` : 'No table',
+          label: tableNumber ? `Table ${tableNumber}` : "No table",
           orders: [],
           waiterCalls: [],
-        })
+        });
       }
-    }
+    };
 
     orders.forEach((order) => {
-      const key = order.tableNumber ?? 'no-table'
-      ensureTable(key, order.tableNumber)
-      byKey.get(key)!.orders.push(order)
-    })
+      const key = order.tableNumber ?? "no-table";
+      ensureTable(key, order.tableNumber);
+      byKey.get(key)!.orders.push(order);
+    });
 
     waiterCalls.forEach((call) => {
-      const key = call.tableNumber ?? 'no-table'
-      ensureTable(key, call.tableNumber)
-      byKey.get(key)!.waiterCalls.push(call)
-    })
+      const key = call.tableNumber ?? "no-table";
+      ensureTable(key, call.tableNumber);
+      byKey.get(key)!.waiterCalls.push(call);
+    });
 
     const getLatestOrderTime = (table: {
-      orders: KitchenOrder[]
+      orders: KitchenOrder[];
     }): number | null => {
-      if (table.orders.length === 0) return null
+      if (table.orders.length === 0) return null;
       return table.orders.reduce((latest, order) => {
-        const time = new Date(order.createdAt).getTime()
-        return time > latest ? time : latest
-      }, 0)
-    }
+        const time = new Date(order.createdAt).getTime();
+        return time > latest ? time : latest;
+      }, 0);
+    };
 
     const getNumericTableNumber = (key: string): number | null => {
-      const n = Number.parseInt(key, 10)
-      return Number.isNaN(n) ? null : n
-    }
+      const n = Number.parseInt(key, 10);
+      return Number.isNaN(n) ? null : n;
+    };
 
     return Array.from(byKey.values()).sort((a, b) => {
-      const aLatest = getLatestOrderTime(a)
-      const bLatest = getLatestOrderTime(b)
+      const aLatest = getLatestOrderTime(a);
+      const bLatest = getLatestOrderTime(b);
 
       if (aLatest !== null && bLatest !== null && aLatest !== bLatest) {
-        return bLatest - aLatest
+        return bLatest - aLatest;
       }
 
-      if (aLatest !== null && bLatest === null) return -1
-      if (aLatest === null && bLatest !== null) return 1
+      if (aLatest !== null && bLatest === null) return -1;
+      if (aLatest === null && bLatest !== null) return 1;
 
-      const aNum = getNumericTableNumber(a.key)
-      const bNum = getNumericTableNumber(b.key)
+      const aNum = getNumericTableNumber(a.key);
+      const bNum = getNumericTableNumber(b.key);
 
       if (aNum !== null && bNum !== null && aNum !== bNum) {
-        return aNum - bNum
+        return aNum - bNum;
       }
 
-      if (aNum !== null && bNum === null) return -1
-      if (aNum === null && bNum !== null) return 1
+      if (aNum !== null && bNum === null) return -1;
+      if (aNum === null && bNum !== null) return 1;
 
-      return a.label.localeCompare(b.label)
-    })
-  }, [orders, waiterCalls, restaurantTables])
+      return a.label.localeCompare(b.label);
+    });
+  }, [orders, waiterCalls, restaurantTables]);
 
   const mergedSelection = useMemo(() => {
-    if (selectedTableKeys.size === 0) return null
-    const selected = new Set(selectedTableKeys)
-    const selectedTables = tables.filter((t) => selected.has(t.key))
-    if (selectedTables.length === 0) return null
+    if (selectedTableKeys.size === 0) return null;
+    const selected = new Set(selectedTableKeys);
+    const selectedTables = tables.filter((t) => selected.has(t.key));
+    if (selectedTables.length === 0) return null;
 
-    const mergedOrders = selectedTables.flatMap((t) => t.orders)
+    const mergedOrders = selectedTables.flatMap((t) => t.orders);
     const totalAmount = mergedOrders.reduce((sum, order) => {
       const orderTotal = order.items.reduce(
-        (itemSum, item) => itemSum + (item.menuItem?.price ?? 0) * item.quantity,
-        0
-      )
-      return sum + orderTotal
-    }, 0)
+        (itemSum, item) =>
+          itemSum + (item.menuItem?.price ?? 0) * item.quantity,
+        0,
+      );
+      return sum + orderTotal;
+    }, 0);
 
-    const tableLabels = selectedTables.map((t) => t.label)
+    const tableLabels = selectedTables.map((t) => t.label);
     const tableNumbers = selectedTables
-      .map((t) => (t.key === 'no-table' ? undefined : t.orders[0]?.tableNumber))
-      .filter((n): n is string => Boolean(n))
+      .map((t) => (t.key === "no-table" ? undefined : t.orders[0]?.tableNumber))
+      .filter((n): n is string => Boolean(n));
 
     return {
       orders: mergedOrders,
       totalAmount,
       tableLabels,
       tableNumbers,
-    }
-  }, [selectedTableKeys, tables])
+    };
+  }, [selectedTableKeys, tables]);
 
   const clearTableOrders = async (tableNumber?: string) => {
-    if (!restaurantId) return
+    if (!restaurantId) return;
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams();
       if (tableNumber) {
-        params.set('tableNumber', tableNumber)
+        params.set("tableNumber", tableNumber);
       }
       const url =
         params.size > 0
           ? `${API_BASE}/api/restaurants/${restaurantId}/orders?${params.toString()}`
-          : `${API_BASE}/api/restaurants/${restaurantId}/orders`
+          : `${API_BASE}/api/restaurants/${restaurantId}/orders`;
 
       const res = await fetch(url, {
-        method: 'DELETE',
-      })
+        method: "DELETE",
+      });
 
       if (!res.ok) {
-        throw new Error('Failed to close table')
+        throw new Error("Failed to close table");
       }
 
       setOrders((prev) =>
         prev.filter((order) =>
-          tableNumber ? order.tableNumber !== tableNumber : Boolean(order.tableNumber)
-        )
-      )
+          tableNumber
+            ? order.tableNumber !== tableNumber
+            : Boolean(order.tableNumber),
+        ),
+      );
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error(err)
+      console.error(err);
     }
-  }
+  };
 
   const clearMergedTables = async () => {
-    if (!restaurantId || !mergedSelection || mergedSelection.tableNumbers.length === 0) return
-    setMergedClearLoading(true)
+    if (
+      !restaurantId ||
+      !mergedSelection ||
+      mergedSelection.tableNumbers.length === 0
+    )
+      return;
+    setMergedClearLoading(true);
     try {
       for (const tableNumber of mergedSelection.tableNumbers) {
         // Reuse existing clear logic per table
-        await clearTableOrders(tableNumber)
+        await clearTableOrders(tableNumber);
       }
-      setSelectedTableKeys(new Set())
+      setSelectedTableKeys(new Set());
     } finally {
-      setMergedClearLoading(false)
+      setMergedClearLoading(false);
     }
-  }
+  };
 
   const createTable = async () => {
-    if (!restaurantId) return
-    const trimmedNumber = newTableNumber.trim()
-    const trimmedName = newTableName.trim()
+    if (!restaurantId) return;
+    const trimmedNumber = newTableNumber.trim();
+    const trimmedName = newTableName.trim();
     if (!trimmedNumber) {
-      setCreateTableError('Table number is required')
-      return
+      setCreateTableError("Table number is required");
+      return;
     }
-    setCreatingTable(true)
-    setCreateTableError(null)
+    setCreatingTable(true);
+    setCreateTableError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/tables`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          number: trimmedNumber,
-          name: trimmedName || `Table ${trimmedNumber}`,
-        }),
-      })
-      const data = (await res.json()) as RestaurantTable & { message?: string }
+      const res = await fetch(
+        `${API_BASE}/api/restaurants/${restaurantId}/tables`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            number: trimmedNumber,
+            name: trimmedName || `Table ${trimmedNumber}`,
+          }),
+        },
+      );
+      const data = (await res.json()) as RestaurantTable & { message?: string };
       if (!res.ok) {
-        throw new Error(data.message ?? 'Failed to create table')
+        throw new Error(data.message ?? "Failed to create table");
       }
-      setRestaurantTables((prev) => [...prev, data])
-      setNewTableNumber('')
-      setNewTableName('')
-      setCreateTableOpen(false)
+      setRestaurantTables((prev) => [...prev, data]);
+      setNewTableNumber("");
+      setNewTableName("");
+      setCreateTableOpen(false);
     } catch (err) {
-      setCreateTableError((err as Error).message)
+      setCreateTableError((err as Error).message);
     } finally {
-      setCreatingTable(false)
+      setCreatingTable(false);
     }
-  }
+  };
 
   const createTablesBulk = async () => {
-    if (!restaurantId) return
-    const startValue = bulkStartNumber.trim()
-    const endValue = bulkEndNumber.trim()
-    const start = Number.parseInt(startValue, 10)
-    const end = Number.parseInt(endValue, 10)
+    if (!restaurantId) return;
+    const startValue = bulkStartNumber.trim();
+    const endValue = bulkEndNumber.trim();
+    const start = Number.parseInt(startValue, 10);
+    const end = Number.parseInt(endValue, 10);
 
     if (!startValue || !endValue || Number.isNaN(start) || Number.isNaN(end)) {
-      setBulkCreateError('Both start and end table numbers are required')
-      return
+      setBulkCreateError("Both start and end table numbers are required");
+      return;
     }
 
     if (start <= 0 || end <= 0) {
-      setBulkCreateError('Table numbers must be positive')
-      return
+      setBulkCreateError("Table numbers must be positive");
+      return;
     }
 
     if (start > end) {
-      setBulkCreateError('Start number must be less than or equal to end number')
-      return
+      setBulkCreateError(
+        "Start number must be less than or equal to end number",
+      );
+      return;
     }
 
-    setBulkCreating(true)
-    setBulkCreateError(null)
+    setBulkCreating(true);
+    setBulkCreateError(null);
 
     try {
-      const createdTables: RestaurantTable[] = []
+      const createdTables: RestaurantTable[] = [];
 
       for (let n = start; n <= end; n++) {
-        const tableNumber = String(n)
-        const res = await fetch(`${API_BASE}/api/restaurants/${restaurantId}/tables`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            number: tableNumber,
-            name: `Table ${tableNumber}`,
-          }),
-        })
+        const tableNumber = String(n);
+        const res = await fetch(
+          `${API_BASE}/api/restaurants/${restaurantId}/tables`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              number: tableNumber,
+              name: `Table ${tableNumber}`,
+            }),
+          },
+        );
 
         if (res.status === 409) {
-          continue
+          continue;
         }
 
-        const data = (await res.json()) as RestaurantTable & { message?: string }
+        const data = (await res.json()) as RestaurantTable & {
+          message?: string;
+        };
 
         if (!res.ok) {
-          throw new Error(data.message ?? 'Failed to create tables')
+          throw new Error(data.message ?? "Failed to create tables");
         }
 
-        createdTables.push(data)
+        createdTables.push(data);
       }
 
       if (createdTables.length === 0) {
-        setBulkCreateError('No tables were created. They may already exist.')
-        return
+        setBulkCreateError("No tables were created. They may already exist.");
+        return;
       }
 
-      setRestaurantTables((prev) => [...prev, ...createdTables])
-      setBulkStartNumber('')
-      setBulkEndNumber('')
-      setBulkCreateOpen(false)
+      setRestaurantTables((prev) => [...prev, ...createdTables]);
+      setBulkStartNumber("");
+      setBulkEndNumber("");
+      setBulkCreateOpen(false);
     } catch (err) {
-      setBulkCreateError((err as Error).message)
+      setBulkCreateError((err as Error).message);
     } finally {
-      setBulkCreating(false)
+      setBulkCreating(false);
     }
-  }
+  };
 
   const loadHistory = async () => {
-    if (!restaurantId) return
-    setHistoryLoading(true)
-    setHistoryError(null)
+    if (!restaurantId) return;
+    setHistoryLoading(true);
+    setHistoryError(null);
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams();
       if (historyTableNumber) {
-        params.set('tableNumber', historyTableNumber)
+        params.set("tableNumber", historyTableNumber);
       }
-      if (historyStatus !== 'all') {
-        params.set('status', historyStatus)
+      if (historyStatus !== "all") {
+        params.set("status", historyStatus);
       }
       if (historyFrom) {
-        params.set('from', historyFrom)
+        params.set("from", historyFrom);
       }
       if (historyTo) {
-        params.set('to', historyTo)
+        params.set("to", historyTo);
       }
-      params.set('includeClosed', 'true')
+      params.set("includeClosed", "true");
       const url =
         params.size > 0
           ? `${API_BASE}/api/restaurants/${restaurantId}/orders?${params.toString()}`
-          : `${API_BASE}/api/restaurants/${restaurantId}/orders`
-      const res = await fetch(url)
-      const data = (await res.json()) as KitchenOrder[] & { message?: string }
+          : `${API_BASE}/api/restaurants/${restaurantId}/orders`;
+      const res = await fetch(url);
+      const data = (await res.json()) as KitchenOrder[] & { message?: string };
       if (!res.ok) {
-        throw new Error(data.message ?? 'Failed to load order history')
+        throw new Error(data.message ?? "Failed to load order history");
       }
-      setHistoryOrders(data)
+      setHistoryOrders(data);
     } catch (err) {
-      setHistoryError((err as Error).message)
-      setHistoryOrders([])
+      setHistoryError((err as Error).message);
+      setHistoryOrders([]);
     } finally {
-      setHistoryLoading(false)
+      setHistoryLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (activeTab !== 'history') return
-    void loadHistory()
+    if (activeTab !== "history") return;
+    void loadHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab])
+  }, [activeTab]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -589,7 +658,7 @@ export default function KitchenDashboardPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
               {restaurant && restaurantId === restaurant._id && restaurant.name
                 ? `${restaurant.name} · Kitchen`
-                : 'Kitchen'}
+                : "Kitchen"}
             </h1>
             <p className="text-xs text-slate-500">
               Incoming orders and waiter calls in real time.
@@ -600,39 +669,43 @@ export default function KitchenDashboardPage() {
           <button
             type="button"
             className={`flex-1 rounded-full px-3 py-1 font-medium ${
-              activeTab === 'orders'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600'
+              activeTab === "orders"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-600"
             }`}
-            onClick={() => setActiveTab('orders')}
+            onClick={() => setActiveTab("orders")}
           >
             Orders
           </button>
           <button
             type="button"
             className={`flex-1 rounded-full px-3 py-1 font-medium ${
-              activeTab === 'tables'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600'
+              activeTab === "tables"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-600"
             }`}
-            onClick={() => setActiveTab('tables')}
+            onClick={() => setActiveTab("tables")}
           >
             Tables
           </button>
           <button
             type="button"
             className={`flex-1 rounded-full px-3 py-1 font-medium ${
-              activeTab === 'history'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600'
+              activeTab === "history"
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-600"
             }`}
-            onClick={() => setActiveTab('history')}
+            onClick={() => setActiveTab("history")}
           >
             History
           </button>
         </div>
-        {activeTab === 'orders' && loading && (
-          <div className="mt-3 space-y-3" aria-busy="true" aria-label="Loading orders">
+        {activeTab === "orders" && loading && (
+          <div
+            className="mt-3 space-y-3"
+            aria-busy="true"
+            aria-label="Loading orders"
+          >
             <div className="h-14 rounded-2xl bg-slate-200/80 animate-pulse" />
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -662,9 +735,11 @@ export default function KitchenDashboardPage() {
             </div>
           </div>
         )}
-        {activeTab === 'orders' && !loading && waiterCalls.length > 0 && (
+        {activeTab === "orders" && !loading && waiterCalls.length > 0 && (
           <section className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3">
-            <h2 className="mb-2 text-sm font-semibold text-amber-900">Waiter calls</h2>
+            <h2 className="mb-2 text-sm font-semibold text-amber-900">
+              Waiter calls
+            </h2>
             <div className="space-y-2">
               {waiterCalls.map((call) => (
                 <div
@@ -673,17 +748,21 @@ export default function KitchenDashboardPage() {
                 >
                   <div>
                     <div className="text-[11px] font-semibold text-amber-900">
-                      {call.tableNumber ? `Table ${call.tableNumber}` : 'Unknown table'}
+                      {call.tableNumber
+                        ? `Table ${call.tableNumber}`
+                        : "Unknown table"}
                     </div>
                     <div className="text-[11px] text-amber-800">
-                      Called at{' '}
+                      Called at{" "}
                       {new Date(call.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </div>
                     {call.notes && (
-                      <div className="mt-1 text-[11px] text-amber-900">Notes: {call.notes}</div>
+                      <div className="mt-1 text-[11px] text-amber-900">
+                        Notes: {call.notes}
+                      </div>
                     )}
                   </div>
                   <button
@@ -698,7 +777,7 @@ export default function KitchenDashboardPage() {
             </div>
           </section>
         )}
-        {activeTab === 'orders' && !loading && (
+        {activeTab === "orders" && !loading && (
           <>
             {error && <p className="text-sm text-rose-500">{error}</p>}
             {!error && orders.length === 0 && (
@@ -708,7 +787,9 @@ export default function KitchenDashboardPage() {
                   alt="No orders yet illustration"
                   className="mb-4 h-32 w-auto opacity-95"
                 />
-                <h2 className="text-sm font-semibold text-slate-900">No orders yet</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  No orders yet
+                </h2>
                 <p className="mt-1 text-xs text-slate-500">
                   New customer orders will appear here the moment they come in.
                 </p>
@@ -720,15 +801,21 @@ export default function KitchenDashboardPage() {
                   <KitchenOrderCard
                     key={order._id}
                     order={order}
-                    onChangeStatus={(status) => void changeStatus(order._id, status)}
+                    onChangeStatus={(status) =>
+                      void changeStatus(order._id, status)
+                    }
                   />
                 ))}
               </div>
             )}
           </>
         )}
-        {activeTab === 'tables' && (loading || tablesLoading) && (
-          <div className="mt-3 space-y-3" aria-busy="true" aria-label="Loading tables">
+        {activeTab === "tables" && (loading || tablesLoading) && (
+          <div
+            className="mt-3 space-y-3"
+            aria-busy="true"
+            aria-label="Loading tables"
+          >
             <div className="flex items-center justify-between">
               <div className="h-4 w-24 rounded bg-slate-200 animate-pulse" />
               <div className="flex gap-2">
@@ -761,18 +848,20 @@ export default function KitchenDashboardPage() {
             </div>
           </div>
         )}
-        {activeTab === 'tables' && !loading && !tablesLoading && (
+        {activeTab === "tables" && !loading && !tablesLoading && (
           <div className="mt-3 space-y-3">
             {mergedSelection && mergedSelection.tableLabels.length > 1 && (
               <div className="rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-sm">
                 <h2 className="mb-1 text-sm font-semibold text-slate-900">
-                  Combined bill for {mergedSelection.tableLabels.join(', ')}
+                  Combined bill for {mergedSelection.tableLabels.join(", ")}
                 </h2>
                 <p className="mb-2 text-[11px] text-slate-600">
-                  This merges orders from the selected tables into a single bill for payment.
+                  This merges orders from the selected tables into a single bill
+                  for payment.
                 </p>
                 <p className="mb-3 text-[11px] font-medium text-slate-900">
-                  Total amount (menu prices sum): {mergedSelection.totalAmount.toFixed(2)}
+                  Total amount (menu prices sum):{" "}
+                  {mergedSelection.totalAmount.toFixed(2)}
                 </p>
                 <button
                   type="button"
@@ -780,7 +869,9 @@ export default function KitchenDashboardPage() {
                   disabled={mergedClearLoading}
                   onClick={() => void clearMergedTables()}
                 >
-                  {mergedClearLoading ? 'Clearing tables…' : 'Mark paid & clear selected tables'}
+                  {mergedClearLoading
+                    ? "Clearing tables…"
+                    : "Mark paid & clear selected tables"}
                 </button>
               </div>
             )}
@@ -791,8 +882,8 @@ export default function KitchenDashboardPage() {
                   type="button"
                   className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
                   onClick={() => {
-                    setCreateTableError(null)
-                    setCreateTableOpen(true)
+                    setCreateTableError(null);
+                    setCreateTableOpen(true);
                   }}
                 >
                   + New table
@@ -801,8 +892,8 @@ export default function KitchenDashboardPage() {
                   type="button"
                   className="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
                   onClick={() => {
-                    setBulkCreateError(null)
-                    setBulkCreateOpen(true)
+                    setBulkCreateError(null);
+                    setBulkCreateOpen(true);
                   }}
                 >
                   Bulk create
@@ -811,10 +902,14 @@ export default function KitchenDashboardPage() {
             </div>
             {createTableOpen && (
               <div className="rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-sm">
-                <h2 className="mb-2 text-sm font-semibold text-slate-900">Create new table</h2>
+                <h2 className="mb-2 text-sm font-semibold text-slate-900">
+                  Create new table
+                </h2>
                 <div className="mb-2 grid gap-2 sm:grid-cols-2">
                   <label className="flex flex-col gap-1">
-                    <span className="text-[11px] font-medium text-slate-700">Table number</span>
+                    <span className="text-[11px] font-medium text-slate-700">
+                      Table number
+                    </span>
                     <input
                       type="text"
                       className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none placeholder:text-slate-400"
@@ -824,7 +919,9 @@ export default function KitchenDashboardPage() {
                     />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-[11px] font-medium text-slate-700">Display name</span>
+                    <span className="text-[11px] font-medium text-slate-700">
+                      Display name
+                    </span>
                     <input
                       type="text"
                       className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none placeholder:text-slate-400"
@@ -835,18 +932,20 @@ export default function KitchenDashboardPage() {
                   </label>
                 </div>
                 {createTableError && (
-                  <p className="mb-2 text-[11px] text-rose-500">{createTableError}</p>
+                  <p className="mb-2 text-[11px] text-rose-500">
+                    {createTableError}
+                  </p>
                 )}
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
                     className="rounded-full px-3 py-1 text-[11px] text-slate-600 hover:bg-slate-100"
                     onClick={() => {
-                      if (creatingTable) return
-                      setCreateTableOpen(false)
-                      setNewTableNumber('')
-                      setNewTableName('')
-                      setCreateTableError(null)
+                      if (creatingTable) return;
+                      setCreateTableOpen(false);
+                      setNewTableNumber("");
+                      setNewTableName("");
+                      setCreateTableError(null);
                     }}
                   >
                     Cancel
@@ -857,14 +956,16 @@ export default function KitchenDashboardPage() {
                     disabled={creatingTable}
                     onClick={() => void createTable()}
                   >
-                    {creatingTable ? 'Creating…' : 'Create table'}
+                    {creatingTable ? "Creating…" : "Create table"}
                   </button>
                 </div>
               </div>
             )}
             {bulkCreateOpen && (
               <div className="rounded-2xl border border-slate-200 bg-white p-3 text-xs shadow-sm">
-                <h2 className="mb-2 text-sm font-semibold text-slate-900">Bulk create tables</h2>
+                <h2 className="mb-2 text-sm font-semibold text-slate-900">
+                  Bulk create tables
+                </h2>
                 <div className="mb-2 grid gap-2 sm:grid-cols-2">
                   <label className="flex flex-col gap-1">
                     <span className="text-[11px] font-medium text-slate-700">
@@ -892,18 +993,20 @@ export default function KitchenDashboardPage() {
                   </label>
                 </div>
                 {bulkCreateError && (
-                  <p className="mb-2 text-[11px] text-rose-500">{bulkCreateError}</p>
+                  <p className="mb-2 text-[11px] text-rose-500">
+                    {bulkCreateError}
+                  </p>
                 )}
                 <div className="flex justify-end gap-2">
                   <button
                     type="button"
                     className="rounded-full px-3 py-1 text-[11px] text-slate-600 hover:bg-slate-100"
                     onClick={() => {
-                      if (bulkCreating) return
-                      setBulkCreateOpen(false)
-                      setBulkStartNumber('')
-                      setBulkEndNumber('')
-                      setBulkCreateError(null)
+                      if (bulkCreating) return;
+                      setBulkCreateOpen(false);
+                      setBulkStartNumber("");
+                      setBulkEndNumber("");
+                      setBulkCreateError(null);
                     }}
                   >
                     Cancel
@@ -914,7 +1017,7 @@ export default function KitchenDashboardPage() {
                     disabled={bulkCreating}
                     onClick={() => void createTablesBulk()}
                   >
-                    {bulkCreating ? 'Creating…' : 'Create tables'}
+                    {bulkCreating ? "Creating…" : "Create tables"}
                   </button>
                 </div>
               </div>
@@ -926,7 +1029,9 @@ export default function KitchenDashboardPage() {
                   alt="No tables yet illustration"
                   className="mb-4 h-24 w-auto opacity-95"
                 />
-                <h2 className="text-sm font-semibold text-slate-900">No tables yet</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  No tables yet
+                </h2>
                 <p className="mt-1 text-xs text-slate-500">
                   Create tables so you can organize and track incoming orders.
                 </p>
@@ -935,8 +1040,8 @@ export default function KitchenDashboardPage() {
                     type="button"
                     className="rounded-full bg-slate-900 px-4 py-1.5 text-[11px] font-medium text-white hover:bg-slate-800"
                     onClick={() => {
-                      setCreateTableError(null)
-                      setCreateTableOpen(true)
+                      setCreateTableError(null);
+                      setCreateTableOpen(true);
                     }}
                   >
                     + New table
@@ -945,8 +1050,8 @@ export default function KitchenDashboardPage() {
                     type="button"
                     className="rounded-full border border-slate-300 bg-white px-4 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
                     onClick={() => {
-                      setBulkCreateError(null)
-                      setBulkCreateOpen(true)
+                      setBulkCreateError(null);
+                      setBulkCreateOpen(true);
                     }}
                   >
                     Bulk create
@@ -955,9 +1060,13 @@ export default function KitchenDashboardPage() {
               </div>
             )}
             {tables.map((table) => {
-              const activeOrders = table.orders.filter((o) => o.status !== 'ready')
-              const readyOrders = table.orders.filter((o) => o.status === 'ready')
-              const isCollapsed = collapsedTables.has(table.key)
+              const activeOrders = table.orders.filter(
+                (o) => o.status !== "ready",
+              );
+              const readyOrders = table.orders.filter(
+                (o) => o.status === "ready",
+              );
+              const isCollapsed = collapsedTables.has(table.key);
               return (
                 <div
                   key={table.key}
@@ -971,7 +1080,7 @@ export default function KitchenDashboardPage() {
                       aria-expanded={!isCollapsed}
                     >
                       <span
-                        className={`shrink-0 text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                        className={`shrink-0 text-slate-400 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
                         aria-hidden
                       >
                         ▶
@@ -981,7 +1090,8 @@ export default function KitchenDashboardPage() {
                           {table.label}
                         </h2>
                         <p className="text-[11px] text-slate-500">
-                          {table.orders.length} orders · {table.waiterCalls.length} waiter calls
+                          {table.orders.length} orders ·{" "}
+                          {table.waiterCalls.length} waiter calls
                         </p>
                       </div>
                     </button>
@@ -990,10 +1100,12 @@ export default function KitchenDashboardPage() {
                         type="button"
                         className="shrink-0 rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-100"
                         onClick={(e) => {
-                          e.stopPropagation()
+                          e.stopPropagation();
                           void clearTableOrders(
-                            table.key === 'no-table' ? undefined : table.orders[0]?.tableNumber
-                          )
+                            table.key === "no-table"
+                              ? undefined
+                              : table.orders[0]?.tableNumber,
+                          );
                         }}
                       >
                         Clear table
@@ -1006,8 +1118,8 @@ export default function KitchenDashboardPage() {
                           className="h-3.5 w-3.5 rounded border-slate-300 text-slate-900"
                           checked={selectedTableKeys.has(table.key)}
                           onChange={(e) => {
-                            e.stopPropagation()
-                            toggleTableSelected(table.key)
+                            e.stopPropagation();
+                            toggleTableSelected(table.key);
                           }}
                         />
                         <span>Merge</span>
@@ -1016,85 +1128,94 @@ export default function KitchenDashboardPage() {
                   </div>
                   {!isCollapsed && (
                     <div className="border-t border-slate-100 px-3 pb-3 pt-2">
-                  {table.waiterCalls.length > 0 && (
-                    <div className="mb-2 rounded-xl bg-amber-50 px-2 py-2">
-                      <p className="mb-1 text-[11px] font-semibold text-amber-900">
-                        Waiter calls
-                      </p>
-                      <div className="space-y-1">
-                        {table.waiterCalls.map((call) => (
-                          <div
-                            key={call._id}
-                            className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-2 py-1 text-[11px]"
-                          >
-                            <span className="text-amber-900">
-                              Called at{' '}
-                              {new Date(call.createdAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                            <button
-                              type="button"
-                              className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900 hover:bg-amber-200"
-                              onClick={() => void markWaiterCallHandled(call._id)}
-                            >
-                              Mark handled
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {table.orders.length > 0 && (
-                    <div className="space-y-2">
-                      {activeOrders.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-semibold text-slate-800">
-                            Active orders
+                      {table.waiterCalls.length > 0 && (
+                        <div className="mb-2 rounded-xl bg-amber-50 px-2 py-2">
+                          <p className="mb-1 text-[11px] font-semibold text-amber-900">
+                            Waiter calls
                           </p>
-                          <div className="grid gap-2 md:grid-cols-2">
-                            {activeOrders.map((order) => (
-                              <KitchenOrderCard
-                                key={order._id}
-                                order={order}
-                                onChangeStatus={(status) =>
-                                  void changeStatus(order._id, status)
-                                }
-                              />
+                          <div className="space-y-1">
+                            {table.waiterCalls.map((call) => (
+                              <div
+                                key={call._id}
+                                className="flex items-center justify-between gap-2 rounded-lg bg-white/80 px-2 py-1 text-[11px]"
+                              >
+                                <span className="text-amber-900">
+                                  Called at{" "}
+                                  {new Date(call.createdAt).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-900 hover:bg-amber-200"
+                                  onClick={() =>
+                                    void markWaiterCallHandled(call._id)
+                                  }
+                                >
+                                  Mark handled
+                                </button>
+                              </div>
                             ))}
                           </div>
                         </div>
                       )}
-                      {readyOrders.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-semibold text-slate-800">
-                            Ready orders
-                          </p>
-                          <div className="grid gap-2 md:grid-cols-2">
-                            {readyOrders.map((order) => (
-                              <KitchenOrderCard
-                                key={order._id}
-                                order={order}
-                                onChangeStatus={(status) =>
-                                  void changeStatus(order._id, status)
-                                }
-                              />
-                            ))}
-                          </div>
+                      {table.orders.length > 0 && (
+                        <div className="space-y-2">
+                          {activeOrders.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-semibold text-slate-800">
+                                Active orders
+                              </p>
+                              <div className="grid gap-2 md:grid-cols-2">
+                                {activeOrders.map((order) => (
+                                  <KitchenOrderCard
+                                    key={order._id}
+                                    order={order}
+                                    onChangeStatus={(status) =>
+                                      void changeStatus(order._id, status)
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {readyOrders.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-semibold text-slate-800">
+                                Ready orders
+                              </p>
+                              <div className="grid gap-2 md:grid-cols-2">
+                                {readyOrders.map((order) => (
+                                  <KitchenOrderCard
+                                    key={order._id}
+                                    order={order}
+                                    onChangeStatus={(status) =>
+                                      void changeStatus(order._id, status)
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
-                  )}
                     </div>
                   )}
                 </div>
-              )
+              );
             })}
           </div>
         )}
-        {activeTab === 'history' && historyLoading && (
-          <div className="mt-3 space-y-3 text-xs" aria-busy="true" aria-label="Loading history">
+        {activeTab === "history" && historyLoading && (
+          <div
+            className="mt-3 space-y-3 text-xs"
+            aria-busy="true"
+            aria-label="Loading history"
+          >
             <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
               <div className="mb-2 h-4 w-28 rounded bg-slate-200 animate-pulse" />
               <div className="mb-3 grid gap-2 sm:grid-cols-4">
@@ -1128,13 +1249,17 @@ export default function KitchenDashboardPage() {
             </div>
           </div>
         )}
-        {activeTab === 'history' && !historyLoading && (
+        {activeTab === "history" && !historyLoading && (
           <div className="mt-3 space-y-3 text-xs">
             <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-              <h2 className="mb-2 text-sm font-semibold text-slate-900">Order history</h2>
+              <h2 className="mb-2 text-sm font-semibold text-slate-900">
+                Order history
+              </h2>
               <div className="mb-3 grid gap-2 sm:grid-cols-4">
                 <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">Table</span>
+                  <span className="text-[11px] font-medium text-slate-700">
+                    Table
+                  </span>
                   <select
                     className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
                     value={historyTableNumber}
@@ -1152,12 +1277,16 @@ export default function KitchenDashboardPage() {
                   </select>
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">Status</span>
+                  <span className="text-[11px] font-medium text-slate-700">
+                    Status
+                  </span>
                   <select
                     className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
                     value={historyStatus}
                     onChange={(e) =>
-                      setHistoryStatus(e.target.value as 'all' | 'new' | 'preparing' | 'ready')
+                      setHistoryStatus(
+                        e.target.value as "all" | "new" | "preparing" | "ready",
+                      )
                     }
                   >
                     <option value="all">All</option>
@@ -1167,7 +1296,9 @@ export default function KitchenDashboardPage() {
                   </select>
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">From</span>
+                  <span className="text-[11px] font-medium text-slate-700">
+                    From
+                  </span>
                   <input
                     type="date"
                     className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
@@ -1176,7 +1307,9 @@ export default function KitchenDashboardPage() {
                   />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-medium text-slate-700">To</span>
+                  <span className="text-[11px] font-medium text-slate-700">
+                    To
+                  </span>
                   <input
                     type="date"
                     className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-900 outline-none"
@@ -1188,10 +1321,10 @@ export default function KitchenDashboardPage() {
               <div className="flex items-center justify-between">
                 <div className="text-[11px] text-slate-500">
                   {historyLoading
-                    ? 'Loading...'
+                    ? "Loading..."
                     : historyOrders.length > 0
                       ? `${historyOrders.length} orders`
-                      : 'No orders for selected filters.'}
+                      : "No orders for selected filters."}
                 </div>
                 <button
                   type="button"
@@ -1229,24 +1362,28 @@ export default function KitchenDashboardPage() {
                   </div>
                   <div className="mb-1 text-[11px] text-slate-500">
                     {new Date(order.createdAt).toLocaleString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      day: '2-digit',
-                      month: '2-digit',
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      day: "2-digit",
+                      month: "2-digit",
                     })}
                   </div>
                   <ul className="mt-1 space-y-1 text-[11px] text-slate-800">
                     {order.items.map((item) => (
                       <li key={item._id} className="flex justify-between gap-2">
                         <span>
-                          <span className="font-semibold">{item.quantity}×</span>{' '}
-                          {item.menuItem?.name ?? 'Unknown item'}
+                          <span className="font-semibold">
+                            {item.quantity}×
+                          </span>{" "}
+                          {item.menuItem?.name ?? "Unknown item"}
                         </span>
                       </li>
                     ))}
                   </ul>
                   {order.notes && (
-                    <p className="mt-1 text-[11px] text-amber-700">Note: {order.notes}</p>
+                    <p className="mt-1 text-[11px] text-amber-700">
+                      Note: {order.notes}
+                    </p>
                   )}
                 </div>
               ))}
@@ -1255,6 +1392,5 @@ export default function KitchenDashboardPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
-

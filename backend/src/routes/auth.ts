@@ -4,6 +4,15 @@ import jwt from 'jsonwebtoken'
 import { Restaurant } from '../models/Restaurant'
 import { RestaurantOwner } from '../models/RestaurantOwner'
 
+// Cache bcrypt hash of super-admin password at startup to avoid rehashing every login
+let cachedSuperAdminPasswordHash: string | null = null
+async function getSuperAdminPasswordHash(plainPassword: string): Promise<string> {
+  if (!cachedSuperAdminPasswordHash) {
+    cachedSuperAdminPasswordHash = await bcrypt.hash(plainPassword, 10)
+  }
+  return cachedSuperAdminPasswordHash
+}
+
 const router = express.Router()
 
 function generateSlug(source: string) {
@@ -194,7 +203,13 @@ router.post('/auth/super-admin/login', async (req, res) => {
 
     const normalizedEmail = email.trim().toLowerCase()
     const emails = allowedEmails.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
-    if (!emails.includes(normalizedEmail) || password !== expectedPassword) {
+    if (!emails.includes(normalizedEmail)) {
+      return res.status(401).json({ message: 'Invalid email or password' })
+    }
+    // Use bcrypt comparison to avoid timing attacks on plain-text password comparison
+    const passwordHash = await getSuperAdminPasswordHash(expectedPassword)
+    const passwordValid = await bcrypt.compare(password, passwordHash)
+    if (!passwordValid) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
 

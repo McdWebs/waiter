@@ -7,6 +7,9 @@ import OwnerSignupPage from './pages/OwnerSignupPage'
 import OwnerSettingsPage from './pages/OwnerSettingsPage'
 import OwnerFeedbackPage from './pages/OwnerFeedbackPage'
 import OwnerStatsPage from './pages/OwnerStatsPage'
+import OwnerQRPage from './pages/OwnerQRPage'
+import OwnerPromotionsPage from './pages/OwnerPromotionsPage'
+import OwnerLoyaltyPage from './pages/OwnerLoyaltyPage'
 import SuperAdminLoginPage from './pages/SuperAdminLoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import OwnerRoute from './components/OwnerRoute'
@@ -41,6 +44,9 @@ function App() {
                 <Route index element={<Navigate to="menu" replace />} />
                 <Route path="menu" element={<AdminMenuPage />} />
                 <Route path="stats" element={<OwnerStatsPage />} />
+                <Route path="promotions" element={<OwnerPromotionsPage />} />
+                <Route path="loyalty" element={<OwnerLoyaltyPage />} />
+                <Route path="qr" element={<OwnerQRPage />} />
                 <Route path="settings" element={<OwnerSettingsPage />} />
                 <Route path="feedback" element={<OwnerFeedbackPage />} />
               </Route>

@@ -7,6 +7,7 @@ import { BusinessPlan } from '../models/BusinessPlan'
 import { authenticateOwner } from '../middleware/auth'
 import multer from 'multer'
 import { uploadMenuItemImage, uploadRestaurantLogo } from '../services/s3Client'
+import { invalidateMenuCache } from '../services/menuAssistant'
 
 const router = express.Router()
 const upload = multer({
@@ -778,6 +779,7 @@ router.post(
       }
 
       const item = await MenuItem.create(newItemData)
+      invalidateMenuCache(ownerRestaurantId)
 
       return res.status(201).json(item)
     } catch (err) {
@@ -882,6 +884,10 @@ router.patch('/items/:itemId', authenticateOwner, upload.single('image'), async 
       return res.status(404).json({ message: 'Item not found' })
     }
 
+    // Invalidate menu cache so next chat call gets fresh data
+    const cat = await MenuCategory.findById(updatedItem.categoryId).lean()
+    if (cat) invalidateMenuCache(cat.restaurantId.toString())
+
     return res.json(updatedItem)
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -918,6 +924,7 @@ router.delete('/items/:itemId', authenticateOwner, async (req, res) => {
     }
 
     await MenuItem.deleteOne({ _id: new Types.ObjectId(itemIdParam) })
+    invalidateMenuCache(ownerRestaurantId)
 
     return res.json({ success: true })
   } catch (err) {
