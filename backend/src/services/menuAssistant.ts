@@ -2,32 +2,54 @@ import { Restaurant } from '../models/Restaurant'
 import { MenuCategory } from '../models/MenuCategory'
 import { MenuItem } from '../models/MenuItem'
 import { openai } from './openaiClient'
+import { getCurrencySymbol } from '../utils/currency'
 
-export async function getMenuContext(restaurantId: string) {
+// ── In-memory cache for menu context ────────────────────────────────────────
+// Avoids hitting MongoDB on every chat message.
+// TTL: 45 seconds — short enough to reflect menu updates quickly.
+interface CachedContext {
+  data: Awaited<ReturnType<typeof _fetchMenuContext>>
+  expiresAt: number
+}
+const menuContextCache = new Map<string, CachedContext>()
+const CACHE_TTL_MS = 45_000
+
+async function _fetchMenuContext(restaurantId: string) {
   const restaurant = await Restaurant.findById(restaurantId).lean()
-  if (!restaurant) {
-    throw new Error('Restaurant not found')
-  }
+  if (!restaurant) throw new Error('Restaurant not found')
 
   const categories = await MenuCategory.find({ restaurantId }).lean()
   const items = await MenuItem.find({
     categoryId: { $in: categories.map((c) => c._id) },
   }).lean()
 
-  const currencyCode = (restaurant.currency ?? 'USD').toUpperCase()
-  const currencySymbol = (() => {
-    switch (currencyCode) {
-      case 'EUR':
-        return '€'
-      case 'GBP':
-        return '£'
-      case 'ILS':
-        return '₪'
-      case 'USD':
-      default:
-        return '$'
-    }
-  })()
+  return { restaurant, categories, items }
+}
+
+export async function getMenuContext(restaurantId: string) {
+  const now = Date.now()
+  const cached = menuContextCache.get(restaurantId)
+  if (cached && cached.expiresAt > now) {
+    const { restaurant, categories, items } = cached.data
+    return buildMenuText(restaurant, categories, items)
+  }
+
+  const fresh = await _fetchMenuContext(restaurantId)
+  menuContextCache.set(restaurantId, { data: fresh, expiresAt: now + CACHE_TTL_MS })
+  return buildMenuText(fresh.restaurant, fresh.categories, fresh.items)
+}
+
+/** Call this whenever menu data changes (item add/edit/delete, settings save). */
+export function invalidateMenuCache(restaurantId: string) {
+  menuContextCache.delete(restaurantId)
+}
+
+function buildMenuText(
+  restaurant: Awaited<ReturnType<typeof _fetchMenuContext>>['restaurant'],
+  categories: Awaited<ReturnType<typeof _fetchMenuContext>>['categories'],
+  items: Awaited<ReturnType<typeof _fetchMenuContext>>['items'],
+) {
+  const currencySymbol = getCurrencySymbol(restaurant.currency)
 
   const lines: string[] = []
   lines.push(`Restaurant: ${restaurant.name}`)
@@ -62,6 +84,7 @@ export async function menuChat({
   }
 
   const { menuText, items, restaurant } = await getMenuContext(restaurantId)
+  // Note: getMenuContext now uses a 45s in-memory cache — no DB hit on every message
 
   const restaurantName = restaurant.name
   const customInstructions = (restaurant.aiInstructions ?? '').trim()

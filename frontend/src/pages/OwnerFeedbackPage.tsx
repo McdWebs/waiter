@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../components/AuthContext'
 import { apiFetch } from '../lib/api'
+import { useLang } from '../contexts/LanguageContext'
 
 interface FeedbackItem {
   _id: string
@@ -14,6 +15,7 @@ interface FeedbackItem {
 
 export default function OwnerFeedbackPage() {
   const { restaurant, token } = useAuth()
+  const { t } = useLang()
   const [items, setItems] = useState<FeedbackItem[]>([])
   const [loading, setLoading] = useState(true)
   const [type, setType] = useState<'feedback' | 'bug'>('feedback')
@@ -67,17 +69,17 @@ export default function OwnerFeedbackPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">Feedback / Bug reports</h1>
+        <h1 className="text-lg font-semibold text-slate-900">{t('feedbackTitle')}</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Send feedback or report a bug. The platform admin can see your messages and reply here.
+          {t('feedbackDesc')}
         </p>
       </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900">Send new</h2>
+        <h2 className="text-sm font-semibold text-slate-900">{t('feedbackSendNew')}</h2>
         <form onSubmit={handleSubmit} className="mt-3 space-y-3">
           <div>
-            <label className="block text-xs font-medium text-slate-700">Type</label>
+            <label className="block text-xs font-medium text-slate-700">{t('feedbackType')}</label>
             <div className="mt-1 flex gap-3">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -87,7 +89,7 @@ export default function OwnerFeedbackPage() {
                   onChange={() => setType('feedback')}
                   className="rounded-full border-slate-300 text-slate-900"
                 />
-                <span className="text-sm">Feedback</span>
+                <span className="text-sm">{t('feedbackFeedback')}</span>
               </label>
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -97,13 +99,13 @@ export default function OwnerFeedbackPage() {
                   onChange={() => setType('bug')}
                   className="rounded-full border-slate-300 text-slate-900"
                 />
-                <span className="text-sm">Bug report</span>
+                <span className="text-sm">{t('bugReport')}</span>
               </label>
             </div>
           </div>
           <div>
             <label htmlFor="feedback-message" className="block text-xs font-medium text-slate-700">
-              Message
+              {t('feedbackMessage')}
             </label>
             <textarea
               id="feedback-message"
@@ -111,36 +113,36 @@ export default function OwnerFeedbackPage() {
               rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Describe your feedback or the bug you encountered…"
+              placeholder={t('feedbackPlaceholder')}
               className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-400"
             />
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
           {success && (
-            <p className="text-sm font-medium text-emerald-600">Thank you! Your message has been sent.</p>
+            <p className="text-sm font-medium text-emerald-600">{t('feedbackSent')}</p>
           )}
           <button
             type="submit"
             disabled={sending || !message.trim()}
             className="rounded-full bg-slate-800 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
           >
-            {sending ? 'Sending…' : 'Send'}
+            {sending ? t('sending') : t('send')}
           </button>
         </form>
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-900">Your feedback</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{t('yourFeedback')}</h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            All messages you sent. Status shows whether support has seen or replied.
+            {t('yourFeedbackDesc')}
           </p>
         </div>
         <div className="p-4">
           {loading ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <p className="text-sm text-slate-500">{t('loading')}</p>
           ) : items.length === 0 ? (
-            <p className="text-sm text-slate-500">No feedback sent yet. Use the form above to send your first message.</p>
+            <p className="text-sm text-slate-500">{t('noFeedbackYet')}</p>
           ) : (
             <ul className="space-y-4">
               {items.map((item) => (
@@ -156,7 +158,7 @@ export default function OwnerFeedbackPage() {
                           : 'rounded-full bg-slate-200 px-2 py-0.5 font-medium text-slate-700'
                       }
                     >
-                      {item.type === 'bug' ? 'Bug' : 'Feedback'}
+                      {item.type === 'bug' ? t('feedbackBug') : t('feedbackFeedback')}
                     </span>
                     <span
                       className={
@@ -168,10 +170,10 @@ export default function OwnerFeedbackPage() {
                       }
                     >
                       {(item.status ?? 'new') === 'new'
-                        ? 'New'
+                        ? t('feedbackStatusNew')
                         : (item.status ?? 'new') === 'read'
-                          ? 'Seen'
-                          : 'Replied'}
+                          ? t('feedbackStatusSeen')
+                          : t('feedbackStatusReplied')}
                     </span>
                     <span className="text-slate-400">
                       {new Date(item.createdAt).toLocaleString()}
@@ -180,7 +182,7 @@ export default function OwnerFeedbackPage() {
                   <p className="mt-2 text-sm text-slate-700 whitespace-pre-wrap">{item.message}</p>
                   {(item.status ?? 'new') === 'replied' && item.adminReply && (
                     <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/80 p-3">
-                      <p className="text-xs font-medium text-emerald-800">Reply from support</p>
+                      <p className="text-xs font-medium text-emerald-800">{t('replyFromSupport')}</p>
                       <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
                         {item.adminReply}
                       </p>

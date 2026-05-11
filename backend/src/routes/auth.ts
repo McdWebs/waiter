@@ -4,6 +4,15 @@ import jwt from 'jsonwebtoken'
 import { Restaurant } from '../models/Restaurant'
 import { RestaurantOwner } from '../models/RestaurantOwner'
 
+// Cache bcrypt hash of super-admin password at startup to avoid rehashing every login
+let cachedSuperAdminPasswordHash: string | null = null
+async function getSuperAdminPasswordHash(plainPassword: string): Promise<string> {
+  if (!cachedSuperAdminPasswordHash) {
+    cachedSuperAdminPasswordHash = await bcrypt.hash(plainPassword, 10)
+  }
+  return cachedSuperAdminPasswordHash
+}
+
 const router = express.Router()
 
 function generateSlug(source: string) {
@@ -197,6 +206,7 @@ router.post('/auth/super-admin/login', async (req, res) => {
     if (!emails.includes(normalizedEmail)) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
+<<<<<<< HEAD
 
     // Support both bcrypt hashes (starting with $2b$) and plain-text passwords for
     // backward-compatibility. New deployments should store a bcrypt hash in
@@ -206,6 +216,11 @@ router.post('/auth/super-admin/login', async (req, res) => {
       ? await bcrypt.compare(password, expectedPassword)
       : password === expectedPassword
 
+=======
+    // Use bcrypt comparison to avoid timing attacks on plain-text password comparison
+    const passwordHash = await getSuperAdminPasswordHash(expectedPassword)
+    const passwordValid = await bcrypt.compare(password, passwordHash)
+>>>>>>> chaim
     if (!passwordValid) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }

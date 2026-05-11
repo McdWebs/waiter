@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../components/AuthContext'
+import { useLang } from '../contexts/LanguageContext'
 
 export default function OwnerLoginPage() {
   const { login, token, loading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation() as { state?: { from?: Location } }
+  const { t, dir } = useLang()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,15 +35,15 @@ export default function OwnerLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900" dir={dir}>
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-8">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wider text-slate-500">Servo</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-            Sign in to manage your restaurant
+            {t('signInTitle')}
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Use the email and password you chose when creating your restaurant.
+            {t('signInDesc')}
           </p>
         </div>
         <form
@@ -55,7 +57,7 @@ export default function OwnerLoginPage() {
           )}
           <div className="space-y-1">
             <label htmlFor="email" className="text-xs font-medium text-slate-700">
-              Email
+              {t('email')}
             </label>
             <input
               id="email"
@@ -69,7 +71,7 @@ export default function OwnerLoginPage() {
           </div>
           <div className="space-y-1">
             <label htmlFor="password" className="text-xs font-medium text-slate-700">
-              Password
+              {t('password')}
             </label>
             <input
               id="password"
@@ -81,7 +83,7 @@ export default function OwnerLoginPage() {
               placeholder="••••••••"
             />
             <p className="mt-1 text-[11px] text-slate-500">
-              Password must be at least 8 characters.
+              {t('passwordHint')}
             </p>
           </div>
           <button
@@ -89,12 +91,12 @@ export default function OwnerLoginPage() {
             className="flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
             disabled={submitting}
           >
-            {submitting ? 'Signing in…' : 'Sign in'}
+            {submitting ? t('signingIn') : t('signIn')}
           </button>
           <div className="pt-2 text-center text-xs text-slate-600">
-            <span>Don&apos;t have a restaurant yet? </span>
+            <span>{t('noRestaurantYet')} </span>
             <Link to="/owner/signup" className="font-semibold text-slate-900 underline-offset-2 hover:underline">
-              Create one
+              {t('createOne')}
             </Link>
           </div>
         </form>

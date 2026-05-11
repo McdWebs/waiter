@@ -13,19 +13,26 @@ import authRoutes from './routes/auth'
 import superAdminRoutes from './routes/superAdmin'
 import feedbackRoutes from './routes/feedback'
 import ownerRoutes from './routes/owner'
+import promotionRoutes from './routes/promotions'
+import loyaltyRoutes from './routes/loyalty'
 import { authenticateSuperAdmin } from './middleware/auth'
+import { generalLimiter } from './middleware/rateLimiter'
 
 const app = express()
 
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// In production set ALLOWED_ORIGINS="https://yourapp.com,https://www.yourapp.com"
+// During development leave it unset to allow all origins.
+const allowedOriginsEnv = process.env.CORS_ORIGIN || process.env.ALLOWED_ORIGINS
+const corsOrigin: cors.CorsOptions['origin'] = allowedOriginsEnv
+  ? allowedOriginsEnv.split(',').map((o) => o.trim())
+  : true
+
 app.use(express.json())
-app.use(
-  cors({
-    // Allow all origins; browser will reflect the requesting origin.
-    // If you want to restrict this later, replace `true` with an array or function.
-    origin: true,
-    credentials: true,
-  })
-)
+app.use(cors({ origin: corsOrigin, credentials: true }))
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+app.use('/api', generalLimiter)
 
 // Serve uploaded images when S3 is not used
 const uploadsDir = path.join(process.cwd(), 'uploads')
@@ -39,14 +46,13 @@ app.use('/api', menuRoutes)
 app.use('/api', orderRoutes)
 app.use('/api', tableRoutes)
 app.use('/api', chatRoutes)
+app.use('/api', promotionRoutes)
+app.use('/api', loyaltyRoutes)
 
 const server = http.createServer(app)
 
 export const io = new SocketIOServer(server, {
-  cors: {
-    origin: true,
-    credentials: true,
-  },
+  cors: { origin: corsOrigin, credentials: true },
 })
 
 io.on('connection', (socket) => {
@@ -59,7 +65,6 @@ const PORT = process.env.PORT ?? 4000
 
 async function start() {
   await connectDb()
-
   server.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Server listening on port ${PORT}`)
@@ -67,4 +72,3 @@ async function start() {
 }
 
 void start()
-

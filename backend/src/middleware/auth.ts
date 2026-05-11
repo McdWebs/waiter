@@ -29,8 +29,9 @@ export async function authenticateOwner(req: Request, res: Response, next: NextF
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
-    ;(req as any).ownerRestaurantId = owner.restaurantId.toString()
-    ;(req as any).ownerEmail = owner.email
+    // Properly typed via src/types/express.d.ts
+    req.ownerRestaurantId = owner.restaurantId.toString()
+    req.ownerEmail = owner.email
 
     return next()
   } catch (err) {
@@ -62,7 +63,7 @@ export async function authenticateSuperAdmin(req: Request, res: Response, next: 
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
-    ;(req as any).superAdminEmail = decoded.superAdminEmail
+    req.superAdminEmail = decoded.superAdminEmail
     return next()
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -70,4 +71,3 @@ export async function authenticateSuperAdmin(req: Request, res: Response, next: 
     return res.status(401).json({ message: 'Unauthorized' })
   }
 }
-

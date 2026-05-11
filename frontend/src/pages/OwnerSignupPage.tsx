@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../components/AuthContext'
+import { useLang } from '../contexts/LanguageContext'
 
 const CURRENCIES = [
   { value: 'USD', label: 'USD ($)' },
@@ -12,6 +13,7 @@ const CURRENCIES = [
 export default function OwnerSignupPage() {
   const { register, token, loading } = useAuth()
   const navigate = useNavigate()
+  const { t, dir } = useLang()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,15 +43,15 @@ export default function OwnerSignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900" dir={dir}>
       <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-8">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-wider text-slate-500">Servo</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-            Create your restaurant
+            {t('createRestaurantTitle')}
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Set up a restaurant, then you can build your menu and manage orders.
+            {t('createRestaurantDesc')}
           </p>
         </div>
         <form
@@ -63,7 +65,7 @@ export default function OwnerSignupPage() {
           )}
           <div className="space-y-1">
             <label htmlFor="restaurantName" className="text-xs font-medium text-slate-700">
-              Restaurant name
+              {t('restaurantName')}
             </label>
             <input
               id="restaurantName"
@@ -75,7 +77,7 @@ export default function OwnerSignupPage() {
           </div>
           <div className="space-y-1">
             <label htmlFor="restaurantSlug" className="text-xs font-medium text-slate-700">
-              Public URL slug (optional)
+              {t('publicSlug')}
             </label>
             <input
               id="restaurantSlug"
@@ -84,13 +86,12 @@ export default function OwnerSignupPage() {
               placeholder="my-restaurant"
             />
             <p className="mt-1 text-[11px] text-slate-500">
-              This will be used in links like <code>/restaurant/your-slug/menu</code>. If you leave it
-              empty, we&apos;ll generate one from the restaurant name.
+              {t('slugHint')}
             </p>
           </div>
           <div className="space-y-1">
             <label htmlFor="currency" className="text-xs font-medium text-slate-700">
-              Currency
+              {t('currency')}
             </label>
             <select
               id="currency"
@@ -107,7 +108,7 @@ export default function OwnerSignupPage() {
           </div>
           <div className="space-y-1">
             <label htmlFor="email" className="text-xs font-medium text-slate-700">
-              Owner email
+              {t('ownerEmail')}
             </label>
             <input
               id="email"
@@ -121,7 +122,7 @@ export default function OwnerSignupPage() {
           </div>
           <div className="space-y-1">
             <label htmlFor="password" className="text-xs font-medium text-slate-700">
-              Password
+              {t('password')}
             </label>
             <input
               id="password"
@@ -131,10 +132,10 @@ export default function OwnerSignupPage() {
               required
               minLength={8}
               className="w-full rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-              placeholder="At least 8 characters"
+              placeholder={t('atLeast8Chars')}
             />
             <p className="mt-1 text-[11px] text-slate-500">
-              You&apos;ll use this email and password to sign in and manage your restaurant.
+              {t('passwordSignupHint')}
             </p>
           </div>
           <button
@@ -142,12 +143,12 @@ export default function OwnerSignupPage() {
             className="flex w-full items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
             disabled={submitting}
           >
-            {submitting ? 'Creating…' : 'Create restaurant'}
+            {submitting ? t('creating') : t('createRestaurant')}
           </button>
           <div className="pt-2 text-center text-xs text-slate-600">
-            <span>Already have a restaurant? </span>
+            <span>{t('alreadyHaveRestaurant')} </span>
             <Link to="/owner/login" className="font-semibold text-slate-900 underline-offset-2 hover:underline">
-              Sign in
+              {t('signIn')}
             </Link>
           </div>
         </form>
